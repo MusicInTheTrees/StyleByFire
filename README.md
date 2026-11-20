@@ -30,7 +30,7 @@ The sign-in and registration forms support browser password managers, so you can
 
 ## Build a look
 
-- **Outfit designer:** choose Casual, Sport, Business, or Red carpet. The selected outfit is the primary workspace, with large piece previews above the clothing picker. A blue-and-gray interface keeps attention on your clothing's actual colors.
+- **Outfit designer:** choose Casual, Sport, Golf, Business, or Red carpet. The selected outfit is the primary workspace, with large piece previews above the clothing picker. A blue-and-gray interface keeps attention on your clothing's actual colors.
 - **Pin required pieces:** create or remix around the items you want to wear. Conflicting pins and missing essentials are explained. New pins leave the current outfit visible until you remix it.
 - **Combine accessories:** ties, belts, eyewear, earrings, necklaces, brooches, watches, wristbands, rings, wallets, and scarves can appear together. Automatic selection chooses eligible pieces across accessory types instead of stopping after one accessory. Ties include neckties, bow ties, and ascots; automatic selection avoids adding several ties at once. Common labels such as eye wear, earing, wrist bands, and scarfs are recognized. Pin multiple accessories when you want a specific combination.
 - **See the reasoning:** the color story shows the outfit's color families. Stylist notes explain the choices and flag tradeoffs such as extra patterns, colors, or pieces outside a mode's guidelines.
@@ -40,6 +40,14 @@ The sign-in and registration forms support browser password managers, so you can
 The Personal stylist uses editable controls for favorite pieces, preferred and excluded tags, color direction, experimentation, warmth, and dresses versus separates. **Exclude socks from the pattern limit** applies to every occasion: sock patterns do not use the pattern allowance in suggestions or warnings, while their colors follow the color-limit preference. These preferences are off by default and saved separately for each account. **Exclude neutral colors from the color limit** omits the colors selected in **My neutral colors** (defaults: Black, White, Gray, Light gray, Navy, Brown, and Tan) from both color-limit warnings and recommendation penalties. Choose any palette colors as neutrals, clear the selection to count every color, or restore the defaults. Your selection also defines neutral foundations for balanced styling. All colors stay visible in the color story; tonal and expressive matching still consider them. The Style playbook lets you change each mode's formality range, color and pattern preferences, socks requirement, outer layer, and accessory suggestions. Recommendations are transparent rules, not a generative AI service. Freeform notes are a notebook; they do not automatically change the recommendation rules.
 
 Business starts as business casual. A completed outfit means its essential slots are filled, not that it meets every workplace or event's dress code. Confirm formal requirements against the invitation or venue.
+
+### Golf looks
+
+Golf prefers polos with tailored bottoms and requires golf footwear by default. Its Style playbook adds adjustable collar, tailored-bottom and trainer controls. Names, subcategories and tags determine these checks; items must also have **Suitable for → Golf** selected. Pinned exceptions remain in the outfit with explanations. Missing golf footwear stays a visible gap, rather than being filled with dress shoes. Pattern limits, custom neutral colors, availability, saved looks and mannequin previews work with Golf too.
+
+Older accounts and backups gain Golf defaults and initial suitability labels for recognizable polos, tailored bottoms and practical accessories. Existing notes, corrected colors, photos, saved looks and other occasion rules are preserved. Once Golf is present, manual suitability and guideline edits remain authoritative. New folder imports and demo pieces receive the same initial labels.
+
+The playbook includes classic, tonal and patterned outfit ideas, plus source links reviewed November 20, 2026. [Pinehurst's course policy](https://www.pinehurst.com/faqs/) and [PGA of Canada's competition policy](https://files.pgaofcanada.com/files/pga/images/events/2026/policies/en/dress-code.pdf) inform the dress-code checks. [adidas' golf guide](https://www.adidas.com/us/blog/667683-what-to-wear-golfing-tips-and-recommendations) informs the comfort, layering and footwear guidance. [Fossil Trace's FAQ](https://fossiltrace.com/faqs/) illustrates less prescriptive course guidance. Course requirements vary; photos and labels cannot verify fabric performance, fit, grip or approval.
 
 ## Preview on a mannequin
 

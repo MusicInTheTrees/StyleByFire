@@ -73,7 +73,7 @@
 @media(max-width:700px){
  .designer-page>.page-heading h1{font-size:2.4rem}.designer-page .subtitle{font-size:1rem;max-width:none}
  .designer-page>.mode-tabs{gap:2px;flex-wrap:wrap}.designer-page .mode-tab{font-size:.875rem;flex:1 0 40%;padding:9px}
- .outfit-workspace{padding:18px;margin-bottom:32px}.outfit-workspace-header{gap:15px}.outfit-actions{width:100%;gap:8px}.outfit-actions>.btn{flex:1;min-width:0;font-size:.8125rem;padding:10px 7px}
+ .outfit-workspace{padding:18px;margin-bottom:32px}.outfit-workspace-header{gap:15px}.outfit-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));width:100%;gap:8px}.outfit-actions>.btn{min-width:0;font-size:.8125rem;padding:10px 7px}.outfit-actions>[data-action="mannequin"]{grid-column:1/-1}
  .outfit-status-line{align-items:flex-start;flex-wrap:wrap;gap:6px}.outfit-status-line>p{font-size:.9375rem}.outfit-piece-count{font-size:.8125rem}
  .outfit-board{grid-template-columns:repeat(2,minmax(0,1fr));gap:22px 12px}.outfit-piece-photo{height:195px}.outfit-piece-label,.outfit-piece-info h3{font-size:.875rem}.outfit-piece-info h3{min-height:0}
  .outfit-palette{gap:10px 13px;font-size:.8125rem}.outfit-palette>span:first-child{width:100%}

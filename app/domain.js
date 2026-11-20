@@ -1,17 +1,19 @@
+import {DEFAULT_GOLF_RULES,golfCandidate,golfConflicts} from './golf.js';
 export const CATEGORIES = Object.freeze(['Cap', 'Top', 'Bottom', 'Socks', 'Shoes', 'Accessories']);
-export const MODES = Object.freeze(['Casual', 'Sport', 'Business', 'Red carpet']);
+export const MODES = Object.freeze(['Casual', 'Sport', 'Golf', 'Business', 'Red carpet']);
 export const DEFAULT_SUBCATEGORIES = [
   ...['Bucket hats','Durags','Beanies','Baseball caps'].map(path=>({category:'Cap',path})),
-  ...['Shirts / Button-down','Blouses','Dresses / Casual','Dresses / Evening','Outerwear'].map(path=>({category:'Top',path})),
-  ...['Pants / Slacks','Skirts','Leggings'].map(path=>({category:'Bottom',path})),
+  ...['Shirts / Button-down','Shirts / Polo / Short sleeve','Blouses','Dresses / Casual','Dresses / Evening','Dresses / Golf','Outerwear','Outerwear / Golf layers'].map(path=>({category:'Top',path})),
+  ...['Pants / Slacks','Pants / Golf','Shorts / Golf','Skirts','Skorts / Golf','Leggings'].map(path=>({category:'Bottom',path})),
   ...['Dress socks','Athletic socks'].map(path=>({category:'Socks',path})),
-  ...['Sneakers','Dress shoes','Boots','Sandals'].map(path=>({category:'Shoes',path})),
+  ...['Sneakers','Golf shoes','Dress shoes','Boots','Sandals'].map(path=>({category:'Shoes',path})),
   ...['Ties / Neckties','Ties / Bow ties','Ties / Ascots','Belts','Glasses','Eyewear / Sunglasses','Jewelry / Earrings','Jewelry / Necklaces','Jewelry / Brooches','Jewelry / Rings','Watches','Wristbands','Wallets','Scarves'].map(path=>({category:'Accessories',path}))
 ];
 export const PALETTE = { Black:'#292929', White:'#ece8df', Gray:'#777974', 'Light gray':'#d5d7d4', Navy:'#343e5c', Blue:'#526c8f', Turquoise:'#40b5b0', Brown:'#745642', Tan:'#b19c78', Olive:'#737860', Green:'#426256', Burgundy:'#854a4b', Red:'#b64b40', Pink:'#ce929f', Purple:'#776081', Yellow:'#c5ab53', Orange:'#ce804f' };
 export const DEFAULT_RULES = {
   Casual: { minFormality:1, maxFormality:3, maxPatterns:2, maxColors:3, requireSocks:false, includeLayer:false, includeAccessory:true, note:'Comfortable everyday pieces. Adjust for the place, weather, and how you want to feel.' },
   Sport: { minFormality:1, maxFormality:2, maxPatterns:2, maxColors:3, requireSocks:true, includeLayer:false, includeAccessory:false, note:'Choose activity-appropriate footwear and clothing. Confirm stretch, breathability, and moisture management yourself.' },
+  Golf: {...DEFAULT_GOLF_RULES},
   Business: { minFormality:2, maxFormality:3, maxPatterns:1, maxColors:3, requireSocks:true, includeLayer:true, includeAccessory:true, note:'Business casual by default. A sport coat with separate trousers is not automatically a matching business suit.' },
   'Red carpet': { minFormality:4, maxFormality:5, maxPatterns:1, maxColors:2, requireSocks:false, includeLayer:false, includeAccessory:true, note:'Formal eveningwear. Confirm the invitation: a generated combination does not certify black-tie or any event’s dress code.' }
 };
@@ -82,10 +84,17 @@ export function assessOutfit(items, mode, rules, profile) {
   if(limitedColors.length>rules.maxColors) warnings.push(`${limitedColors.length} ${profile.ignoreNeutralColors?'non-neutral ':''}color families exceed your preference of ${rules.maxColors}.`);
   if(items.some(i=>!i.colorVerified)) warnings.push('Some color labels are provisional. Check them in daylight or in the photo studio.');
   if(mode==='Red carpet') warnings.push('Check the event invitation. Eveningwear and black-tie requirements vary.');
+  if(mode==='Golf'){
+    warnings.push('Check your course dress code, including shirt tucking, hem length and permitted spikes. Confirm stretch, breathability and walking comfort against the garments.');
+    for(const item of items)for(const issue of golfConflicts(item,rules))warnings.push(`${item.name} ${issue}.`);
+    if(missing.includes('Shoes'))warnings.push(rules.golfAllowTrainers?'Add golf shoes or trainers approved by your course; dress shoes do not fill this gap.':'Add golf shoes, or allow course-approved trainers in the Golf playbook; dress shoes do not fill this gap.');
+    else if(items.some(i=>i.category==='Shoes'&&!/\bgolf\b/i.test([i.name,i.subcategory,...i.tags].join(' '))))warnings.push('Confirm that your course accepts these trainers and that their soles provide suitable grip.');
+  }
   for(const type of ['tie','belt','glasses','watch']) {
     if(items.filter(i=>accessoryType(i)===type).length>1)warnings.push(`Multiple ${ACCESSORY_LABELS[type].toLowerCase()} pieces are pinned. Check that you intend to wear them together.`);
   }
   const reasons=[];
+  if(mode==='Golf'&&items.some(i=>i.category==='Top'&&/\bpolo\b/i.test([i.name,i.subcategory,...i.tags].join(' '))))reasons.push('A polo anchors the golf look; keep the rest comfortable for walking and a full swing.');
   if(items.some(i=>i.favorite)) reasons.push('Includes pieces you have favorited.');
   if(patterns<=rules.maxPatterns) reasons.push(`Keeps pattern mixing within your ${rules.maxPatterns}-piece preference.`);
   if(profile.ignoreSockPatterns===true&&items.some(i=>i.category==='Socks'&&i.pattern!=='Solid')) reasons.push(profile.ignoreNeutralColors?'Sock patterns are excluded from your pattern limit. Sock colors follow your color-limit preference.':'Sock patterns are excluded from your pattern limit. Their colors still count.');
@@ -103,7 +112,7 @@ export function generateOutfit(allItems, mode, rules, profile, lockedIds=[], see
   const errors=validateLocks(selected,profile.avoidTags);
   if(errors.length) return {items:selected,errors,missing:[],warnings:[],reasons:[],complete:false};
   const excluded=profile.avoidTags.map(s=>s.toLowerCase());
-  const eligible=allItems.filter(i=>(!i.availability||i.availability==='ready')&&i.modes.includes(mode)&&i.formality>=rules.minFormality&&i.formality<=rules.maxFormality&&!i.tags.some(t=>excluded.includes(t.toLowerCase())));
+  const eligible=allItems.filter(i=>(!i.availability||i.availability==='ready')&&i.modes.includes(mode)&&i.formality>=rules.minFormality&&i.formality<=rules.maxFormality&&!i.tags.some(t=>excluded.includes(t.toLowerCase()))&&(mode!=='Golf'||golfConflicts(i,rules).length===0));
   const has=s=>selected.some(i=>slotFor(i)===s);
   function pick(slot,type=null) {
     const matches=i=>slotFor(i)===slot&&(type===null||accessoryType(i)===type);
@@ -115,6 +124,7 @@ export function generateOutfit(allItems, mode, rules, profile, lockedIds=[], see
       +(profile.palette==='tonal'?6*(pieceColors.length-newColors)/pieceColors.length:profile.palette==='balanced'?(pieceColors.every(c=>neutralColors(profile).includes(c))?2:0):3*newColors/pieceColors.length)
       -(countsTowardPatternLimit(i,profile)&&patterns>=rules.maxPatterns?12:0)
       -(newCountedColors>0&&limitColors.length+newCountedColors>rules.maxColors?8:0)
+      +(mode==='Golf'&&/\bpolo\b/i.test([i.name,i.subcategory,...i.tags].join(' '))?6:0)
       -Math.abs((i.warmth??1)-profile.warmth)*2+random()*(2+profile.adventure*2);};
     const scored=options.map(item=>({item,score:rank(item)})).sort((a,b)=>b.score-a.score);
     if(scored[0])selected.push(scored[0].item);
@@ -133,6 +143,11 @@ export function generateOutfit(allItems, mode, rules, profile, lockedIds=[], see
 }
 export function validateState(state) {
   if(!state||state.version!==1||!Array.isArray(state.items)||!Array.isArray(state.looks)||!state.profile||!state.rules||!Array.isArray(state.subcategories)) throw Error('This is not a valid StyleByFire wardrobe.');
+  // Upgrade old accounts and JSON backups once. Later manual suitability edits stay authoritative.
+  if(!Object.hasOwn(state.rules,'Golf')){
+    state.rules.Golf=structuredClone(DEFAULT_GOLF_RULES);
+    for(const item of state.items)if(item&&Array.isArray(item.modes)&&Array.isArray(item.tags)&&typeof item.subcategory==='string'&&!item.modes.includes('Golf')&&golfCandidate(item))item.modes.push('Golf');
+  }
   if(state.items.length>10000||state.looks.length>10000)throw Error('This wardrobe exceeds the local app limit.');
   const ids=new Set();
   for(const i of state.items) {
@@ -155,6 +170,7 @@ export function validateState(state) {
   if(p.ignoreSockPatterns!==undefined&&typeof p.ignoreSockPatterns!=='boolean')throw Error('Invalid sock pattern preference.');
   if(typeof p.name!=='string'||!['balanced','tonal','expressive'].includes(p.palette)||!['either','dress','separates'].includes(p.silhouette)||!Array.isArray(p.preferredTags)||!Array.isArray(p.avoidTags)||![...p.preferredTags,...p.avoidTags].every(t=>typeof t==='string')||typeof p.notes!=='string'||!Number.isFinite(p.favoriteBias)||p.favoriteBias<0||p.favoriteBias>10||!Number.isFinite(p.adventure)||p.adventure<0||p.adventure>10||!Number.isFinite(p.warmth)||p.warmth<0||p.warmth>2)throw Error('Invalid stylist preferences.');
   for(const mode of MODES){const r=state.rules[mode]; if(!r||![r.minFormality,r.maxFormality,r.maxPatterns,r.maxColors].every(Number.isInteger)||r.minFormality<1||r.maxFormality>5||r.minFormality>r.maxFormality||r.maxPatterns<0||r.maxPatterns>8||r.maxColors<1||r.maxColors>8||!['requireSocks','includeLayer','includeAccessory'].every(k=>typeof r[k]==='boolean')||typeof r.note!=='string')throw Error('Invalid style guidelines.');}
+  for(const key of ['golfCollaredTop','golfTailoredBottoms','golfAllowTrainers'])if(state.rules.Golf[key]!==undefined&&typeof state.rules.Golf[key]!=='boolean')throw Error('Invalid Golf guidelines.');
   if(state.reference&&!validSource(state.reference))throw Error('Invalid background reference.');
   if(state.inventoryPaths!==undefined&&(!Array.isArray(state.inventoryPaths)||!state.inventoryPaths.every(p=>typeof p==='string')))throw Error('Invalid inventory history.');
   return state;

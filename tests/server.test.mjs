@@ -19,6 +19,7 @@ async function fixture(t,{port,legacy=false}={}){
  for(const name of ['server.mjs','accounts.mjs','demo.mjs','demo-catalog.mjs','web-import.mjs','inventory.mjs','mannequin-store.mjs','mannequin-providers.mjs'])await copyFile(path.join(root,name),path.join(project,name));
  await mkdir(path.join(data,'demo-photos'),{recursive:true});for(const entry of DEMO_CATALOG)await writeFile(path.join(data,'demo-photos',demoCacheName(entry)),png);
  await copyFile(path.join(root,'app','domain.js'),path.join(project,'app','domain.js'));
+  await copyFile(path.join(root,'app','golf.js'),path.join(project,'app','golf.js'));
  await copyFile(path.join(root,'app','mannequin.js'),path.join(project,'app','mannequin.js'));
  await writeFile(path.join(project,'package.json'),' {"type":"module"}');await writeFile(path.join(project,'app','index.html'),'<!doctype html><title>Test fixture</title>');
  for(const filename of ['ambient-diamond.png','ambient-geometric.png','ambient-lattice.png','ambient-dots.png','sidebar-pinstripe.png','private-fixture.png'])await writeFile(path.join(project,'app',filename),png);
@@ -84,7 +85,15 @@ test('accounts preserve legacy corrections, isolate wardrobes and photos, and su
 test('a clean checkout without private seed files can register and use the demo',async t=>{
  const {request,authenticate}=await fixture(t,{port:4188});
  const owner=await authenticate('/api/auth/register',{displayName:'Fresh Owner',username:'fresh.owner',password:'fresh-test-password'});
- assert.equal((await (await request('/api/state',{identity:owner})).json()).items.length,0);
+ const ownState=await (await request('/api/state',{identity:owner})).json();assert.equal(ownState.items.length,0);assert.equal(ownState.rules.Golf.golfAllowTrainers,false);
+ const uploaded=await (await request('/api/images',{identity:owner,method:'POST',body:png})).json();
+ ownState.items=[{...fixtureItem(uploaded.src),name:'Navy polo',modes:['Casual','Golf']}];
+ ownState.looks=[{id:'golf-look',name:'Practice round',mode:'Golf',itemIds:['fixture']}];ownState.rules.Golf.golfAllowTrainers=true;
+ assert.equal((await request('/api/state',{identity:owner,method:'PUT',json:ownState})).status,200);
+ const golfSaved=await (await request('/api/state',{identity:owner})).json();assert.deepEqual(golfSaved,ownState);
+ const oldBackup=structuredClone(ownState);delete oldBackup.rules.Golf;oldBackup.items[0].modes=['Casual'];
+ assert.equal((await request('/api/state',{identity:owner,method:'PUT',json:oldBackup})).status,200);
+ const upgraded=await (await request('/api/state',{identity:owner})).json();assert.ok(upgraded.items[0].modes.includes('Golf'));assert.equal(upgraded.items[0].stylistNotes,ownState.items[0].stylistNotes);assert.equal(upgraded.rules.Golf.golfAllowTrainers,false);
  const refreshed=await request('/api/inventory/refresh',{identity:owner,method:'POST'});assert.equal(refreshed.status,200);assert.equal((await refreshed.json()).added,0);
  const demo=await authenticate('/api/auth/demo');const state=await (await request('/api/state',{identity:demo})).json();assert.equal(state.items.length,28);assert.equal((await request(state.items[0].src,{identity:demo})).status,200);assert.equal((await request(state.items[0].src,{identity:owner})).status,404);
  const again=await authenticate('/api/auth/demo');assert.equal(again.user.id,demo.user.id);

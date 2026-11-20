@@ -2,6 +2,7 @@ import {readdir,readFile,writeFile} from 'node:fs/promises';
 import path from 'node:path';
 import {createHash} from 'node:crypto';
 import {DEFAULT_ADJUSTMENTS} from './app/domain.js';
+import {golfCandidate} from './app/golf.js';
 
 const pretty=value=>value.replace(/([a-z])([A-Z])/g,'$1 $2').replace(/[_-]/g,' ');
 export function inferLabels(relative){
@@ -34,6 +35,7 @@ export async function refreshInventory({root,data,state,seed}){
    const hash=createHash('sha256').update(relative).digest('hex').slice(0,32),filename=hash+(jpg?'.jpg':png?'.png':'.webp');await writeFile(path.join(data,'images',filename),bytes);
    item={id:'folder-'+hash,name:pretty(path.basename(file,ext)),...inferLabels(relative),src:'/media/'+filename,sourcePath:relative,color:'Gray',colorVerified:false,pattern:'Solid',warmth:1,tags:[],favorite:false,notes:'Imported from your clothing folder. Review the name, color, pattern, formality, and occasion labels.',stylistNotes:'',adjustments:structuredClone(DEFAULT_ADJUSTMENTS)};
   }
+  if(!item.modes.includes('Golf')&&golfCandidate(item))item.modes.push('Golf');
   next.items.push(item);known.add(relative);added++;
   if(item.subcategory&&!next.subcategories.some(s=>s.category===item.category&&s.path===item.subcategory))next.subcategories.push({category:item.category,path:item.subcategory});
  }
