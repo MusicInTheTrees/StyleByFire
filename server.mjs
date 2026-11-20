@@ -6,6 +6,7 @@ import {randomUUID} from 'node:crypto';
 import {validateState} from './app/domain.js';
 import {refreshInventory} from './inventory.mjs';
 import {LocalAccounts,atomicJSON} from './accounts.mjs';
+import {previewWebsiteImport} from './web-import.mjs';
 
 const root=path.dirname(fileURLToPath(import.meta.url));
 const data=process.env.STYLEBYFIRE_DATA_DIR?path.resolve(process.env.STYLEBYFIRE_DATA_DIR):path.join(root,'.data');
@@ -13,6 +14,7 @@ let seed;try{seed=JSON.parse(await readFile(path.join(root,'seed.json'),'utf8'))
 const accounts=new LocalAccounts({data,root,seed});await accounts.initialize();
 const port=Number(process.env.PORT||4173);
 const mime={'.html':'text/html; charset=utf-8','.js':'text/javascript; charset=utf-8','.css':'text/css; charset=utf-8','.svg':'image/svg+xml','.jpg':'image/jpeg','.png':'image/png','.webp':'image/webp','.json':'application/json','.ico':'image/x-icon'};
+const publicAmbientImages=new Set(['/ambient-diamond.png','/ambient-geometric.png','/ambient-lattice.png','/ambient-dots.png']);
 function send(res,status,value,type='application/json'){res.writeHead(status,{'Content-Type':type,'Cache-Control':'no-store','X-Content-Type-Options':'nosniff'});res.end(type==='application/json'?JSON.stringify(value):value);}
 async function body(req,max){const chunks=[];let total=0;for await(const chunk of req){total+=chunk.length;if(total>max)throw Object.assign(Error('The request is too large.'),{status:413});chunks.push(chunk);}return Buffer.concat(chunks);}
 const jsonBody=async req=>JSON.parse((await body(req,16*1024)).toString());
@@ -43,6 +45,15 @@ const server=http.createServer(async(req,res)=>{
    if(pathname.startsWith('/api/')&&req.headers['x-stylebyfire-account']!==user.id)return send(res,409,{error:'The active account changed in another tab. Reload this page before continuing.'});
   }
   if(pathname==='/api/state'&&req.method==='GET')return send(res,200,await accounts.state(user));
+  if(pathname==='/api/web-import/preview'&&req.method==='POST'){
+   const input=await jsonBody(req);
+   const result=await previewWebsiteImport({url:input?.url,saveImage:async(bytes,extension)=>{
+    const filename=randomUUID()+'.'+extension;
+    await queued(()=>writeFile(path.join(accounts.userFolder(user),'images',filename),bytes));
+    return '/media/'+filename;
+   }});
+   return send(res,200,result);
+  }
   if(pathname==='/api/inventory/refresh'&&req.method==='POST'){
    if(!user.ownsLegacy)return send(res,403,{error:'Folder refresh belongs to the original wardrobe account. Import photos into this account instead.'});
    const result=await queued(async()=>{const state=await accounts.state(user);let refreshed;try{refreshed=await refreshInventory({root,data:accounts.userFolder(user),state,seed});}catch(error){if(error.code==='ENOENT')return {state,added:0,skipped:[]};throw error;}validateState(refreshed.state);await accounts.validateSources(user,refreshed.state);await atomicJSON(accounts.stateFile(user),refreshed.state);return refreshed;});return send(res,200,result);
@@ -64,7 +75,7 @@ const server=http.createServer(async(req,res)=>{
    file=path.join(root,'app','thumbs',pathname.slice(8));
   }
   else{
-   if(pathname!=='/'&&!/^\/[a-z0-9_-]+\.(html|js|css|svg|ico|woff2)$/i.test(pathname))return send(res,404,{error:'File not found.'});
+   if(pathname!=='/'&&!publicAmbientImages.has(pathname)&&!/^\/[a-z0-9_-]+\.(html|js|css|svg|ico|woff2)$/i.test(pathname))return send(res,404,{error:'File not found.'});
    const base=path.join(root,'app');file=path.resolve(base,'.'+(pathname==='/'?'/index.html':pathname));if(!file.startsWith(base+path.sep))return send(res,403,{error:'Invalid path.'});
   }
   const bytes=await readFile(file);res.writeHead(200,{'Content-Type':mime[path.extname(file)]||'application/octet-stream','Cache-Control':privateMedia||privateThumb?'no-store':'no-cache','X-Content-Type-Options':'nosniff'});res.end(req.method==='HEAD'?undefined:bytes);

@@ -7,6 +7,7 @@ import path from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {once} from 'node:events';
 import {DEFAULT_ADJUSTMENTS,DEFAULT_PROFILE,DEFAULT_RULES,DEFAULT_SUBCATEGORIES,accessoryType} from '../app/domain.js';
+import {DEMO_CATALOG,demoCacheName} from '../demo.mjs';
 const root=fileURLToPath(new URL('..',import.meta.url));
 const png=Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+j2ioAAAAASUVORK5CYII=','base64');
 const empty=()=>({version:1,items:[],looks:[],profile:structuredClone(DEFAULT_PROFILE),rules:structuredClone(DEFAULT_RULES),subcategories:structuredClone(DEFAULT_SUBCATEGORIES),reference:null});
@@ -15,9 +16,11 @@ const fixtureItem=(src,id='fixture')=>({id,name:'Corrected blue shirt',category:
 async function fixture(t,{port,legacy=false}={}){
  const dir=await mkdtemp(path.join(tmpdir(),'stylebyfire-test-')),project=path.join(dir,'project'),data=path.join(dir,'data');
  await mkdir(path.join(project,'app','thumbs'),{recursive:true});await mkdir(path.join(data,'images'),{recursive:true});
- for(const name of ['server.mjs','accounts.mjs','demo.mjs','inventory.mjs'])await copyFile(path.join(root,name),path.join(project,name));
+ for(const name of ['server.mjs','accounts.mjs','demo.mjs','demo-catalog.mjs','web-import.mjs','inventory.mjs'])await copyFile(path.join(root,name),path.join(project,name));
+ await mkdir(path.join(data,'demo-photos'),{recursive:true});for(const entry of DEMO_CATALOG)await writeFile(path.join(data,'demo-photos',demoCacheName(entry)),png);
  await copyFile(path.join(root,'app','domain.js'),path.join(project,'app','domain.js'));
  await writeFile(path.join(project,'package.json'),' {"type":"module"}');await writeFile(path.join(project,'app','index.html'),'<!doctype html><title>Test fixture</title>');
+ for(const filename of ['ambient-diamond.png','ambient-geometric.png','ambient-lattice.png','ambient-dots.png','private-fixture.png'])await writeFile(path.join(project,'app',filename),png);
  let legacyBytes;
  if(legacy){
   const state=empty();state.items=[fixtureItem('/media/seed-fixture.png'),fixtureItem('/media/11111111-1111-1111-1111-111111111111.png','uploaded')];state.reference=state.items[1].src;state.looks=[{id:'look',name:'Original look',mode:'Business',itemIds:['fixture','uploaded']}];
@@ -38,14 +41,17 @@ async function fixture(t,{port,legacy=false}={}){
 test('accounts preserve legacy corrections, isolate wardrobes and photos, and survive restart',async t=>{
  const f=await fixture(t,{port:4187,legacy:true}),{request,authenticate}=f;
  assert.equal((await request('/')).status,200);assert.equal((await (await request('/api/health')).json()).app,'StyleByFire');
+ for(const filename of ['ambient-diamond.png','ambient-geometric.png','ambient-lattice.png','ambient-dots.png'])assert.equal((await request('/'+filename)).status,200);
+ assert.equal((await request('/private-fixture.png')).status,404);
  assert.deepEqual(await (await request('/api/auth')).json(),{user:null,needsSetup:true});
+ assert.equal((await request('/api/web-import/preview',{method:'POST',json:{url:'https://127.0.0.1/private'}})).status,401);
  for(const route of ['/api/state','/media/seed-fixture.png','/thumbs/seed-fixture.png','/THUMBS/seed-fixture.png','/x%2f..%2fthumbs/seed-fixture.png'])assert.equal((await request(route)).status,401,route);
  for(const route of ['/thumbs%5cseed-fixture.png','/thumbs./seed-fixture.png','/thumbs%20/seed-fixture.png'])assert.notEqual((await request(route)).status,200,route);
  assert.equal((await request('/api/auth',{headers:{Origin:'https://external.example'}})).status,403);
  const demo=await authenticate('/api/auth/demo');assert.equal(demo.user.displayName,'Jamie Demo');assert.equal(demo.user.isDemo,true);assert.equal(demo.needsSetup,true);assert.equal(demo.user.canRefreshInventory,false);
  assert.match(demo.cookieHeader,/HttpOnly/);assert.match(demo.cookieHeader,/SameSite=Strict/);
  const demoState=await (await request('/api/state',{identity:demo})).json();assert.equal(demoState.items.length,26);assert.deepEqual(new Set(demoState.items.filter(i=>i.category==='Accessories').map(accessoryType)),new Set(['tie','belt','glasses','earrings','necklace','brooch','watch','wristband','ring']));
- const demoPhoto=await request(demoState.items[0].src,{identity:demo});assert.equal(demoPhoto.status,200);assert.equal(demoPhoto.headers.get('cache-control'),'no-store');const demoBytes=Buffer.from(await demoPhoto.arrayBuffer());assert.equal(demoBytes.readUInt32BE(16),360);assert.equal(demoBytes.readUInt32BE(20),420);
+ const demoPhoto=await request(demoState.items[0].src,{identity:demo});assert.equal(demoPhoto.status,200);assert.equal(demoPhoto.headers.get('cache-control'),'no-store');const demoBytes=Buffer.from(await demoPhoto.arrayBuffer());assert.deepEqual(demoBytes,png);
  for(const route of ['/media/seed-fixture.png','/thumbs/seed-fixture.png','/THUMBS/seed-fixture.png','/x%2f..%2fthumbs/seed-fixture.png'])assert.equal((await request(route,{identity:demo})).status,404,route);
  assert.equal((await request('/api/inventory/refresh',{identity:demo,method:'POST'})).status,403);
  const owner=await authenticate('/api/auth/register',{displayName:'Fixture Owner',username:'fixture.owner',password:'test-password-owner'});assert.equal(owner.user.canRefreshInventory,true);assert.equal(owner.needsSetup,false);
@@ -55,6 +61,9 @@ test('accounts preserve legacy corrections, isolate wardrobes and photos, and su
  assert.equal((await request('/thumbs/seed-fixture.png',{identity:owner})).headers.get('cache-control'),'no-store');
  const other=await authenticate('/api/auth/register',{displayName:'Another Fixture',username:'other.fixture',password:'test-password-other'});const otherState=await (await request('/api/state',{identity:other})).json();assert.equal(otherState.items.length,0);assert.equal(otherState.reference,null);assert.equal(other.user.canRefreshInventory,false);
  assert.equal((await request('/api/state',{identity:other,headers:{'X-StyleByFire-Account':owner.user.id}})).status,409);
+ assert.equal((await request('/api/web-import/preview',{identity:other,method:'POST',json:{url:'https://127.0.0.1/private'},headers:{'X-StyleByFire-Account':owner.user.id}})).status,409);
+ assert.equal((await request('/api/web-import/preview',{identity:other,method:'POST',json:{url:'https://127.0.0.1/private'}})).status,400);
+ assert.equal((await request('/api/web-import/preview',{identity:owner,method:'POST',json:{url:'http://shop.clothing.com/item'}})).status,400);
  assert.equal((await request('/api/state',{headers:{Cookie:owner.cookie}})).status,409);
  const forged=structuredClone(otherState);forged.items=[state.items[0]];assert.equal((await request('/api/state',{identity:other,method:'PUT',json:forged})).status,400);
  forged.items=[state.items[1]];assert.equal((await request('/api/state',{identity:other,method:'PUT',json:forged})).status,400);

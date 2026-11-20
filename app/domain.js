@@ -128,6 +128,8 @@ export function validateState(state) {
     if(i.adjustments)validateAdjustments(i.adjustments);
     if(i.notes!==undefined&&typeof i.notes!=='string'||i.stylistNotes!==undefined&&typeof i.stylistNotes!=='string')throw Error('Clothing notes must be text.');
     if(i.description!==undefined&&(typeof i.description!=='string'||i.description.length>2000))throw Error('Clothing descriptions must be text under 2,000 characters.');
+    for(const key of ['sourceUrl','sourceImageUrl'])if(i[key]!==undefined){let url;try{url=new URL(i[key]);}catch{throw Error('Invalid clothing source link.');}if(typeof i[key]!=='string'||i[key].length>4096||url.protocol!=='https:'||url.username||url.password)throw Error('Invalid clothing source link.');}
+    if(i.sourceName!==undefined&&(typeof i.sourceName!=='string'||i.sourceName.length>200))throw Error('Invalid clothing source name.');
     ids.add(i.id);
   }
   for(const look of state.looks) if(typeof look.id!=='string'||typeof look.name!=='string'||!MODES.includes(look.mode)||!Array.isArray(look.itemIds)||!look.itemIds.every(id=>ids.has(id)))throw Error('A saved look refers to an invalid item.');

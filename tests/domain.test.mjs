@@ -7,6 +7,12 @@ const base=()=>[make('shirt','Top'),make('pants','Bottom'),make('shoes','Shoes')
 const run=(items,locks=[],overrides={})=>generateOutfit(items,'Casual',DEFAULT_RULES.Casual,{...profile,...overrides},locks,42);
 // Synthetic fixtures keep the test suite independent of anyone's private photos.
 const seed={items:[...base(),make('sport-coat','Top',{role:'outerwear',color:'Gray'}),make('socks','Socks'),make('necktie','Accessories',{subcategory:'Ties / Neckties',color:'Navy'}),make('belt','Accessories',{subcategory:'Belts'})],reference:'/media/seed-reference.jpg'};
+
+test('website source links preserve attribution and reject executable or credential-bearing links',()=>{
+ const wardrobe=()=>({version:1,items:[make('import','Top',{sourceUrl:'https://example.com/shirt',sourceImageUrl:'https://images.example.com/shirt.jpg',sourceName:'Example store'})],looks:[],profile:structuredClone(DEFAULT_PROFILE),rules:structuredClone(DEFAULT_RULES),subcategories:[]});
+ assert.equal(validateState(wardrobe()).items[0].sourceName,'Example store');
+ for(const value of ['javascript:alert(1)','data:text/html,test','https://user:secret@example.com/photo.jpg',42])for(const field of ['sourceUrl','sourceImageUrl']){const state=wardrobe();state.items[0][field]=value;assert.throws(()=>validateState(state),/source link/);}
+});
 test('six fixed top-level categories preserve the outerwear layer',()=>{assert.deepEqual(CATEGORIES,['Cap','Top','Bottom','Socks','Shoes','Accessories']);assert.equal(slotFor(seed.items.find(i=>i.id==='sport-coat')),'layer');});
 test('business generator reports absent footwear rather than claiming completeness',()=>{const result=generateOutfit(seed.items.filter(i=>i.category!=='Shoes'),'Business',DEFAULT_RULES.Business,profile,[],72);assert.deepEqual(result.missing,['Shoes']);assert.equal(result.complete,false);assert.ok(result.items.some(i=>slotFor(i)==='top'));assert.ok(result.items.some(i=>slotFor(i)==='bottom'));});
 test('sport coats are not suggested as athletic or red-carpet clothes',()=>{for(const mode of ['Sport','Red carpet']){const result=generateOutfit(seed.items,mode,DEFAULT_RULES[mode],profile,[],1);assert.equal(result.items.length,0);assert.equal(result.complete,false);}});

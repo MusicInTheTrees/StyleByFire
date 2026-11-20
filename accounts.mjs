@@ -3,7 +3,7 @@ import path from 'node:path';
 import {randomUUID,randomBytes,scrypt as scryptCallback,timingSafeEqual,createHash} from 'node:crypto';
 import {promisify} from 'node:util';
 import {DEFAULT_PROFILE,DEFAULT_RULES,DEFAULT_SUBCATEGORIES,validateState} from './app/domain.js';
-import {createDemoWardrobe} from './demo.mjs';
+import {createDemoWardrobe,upgradeDemoWardrobe} from './demo.mjs';
 
 const scrypt=promisify(scryptCallback);
 const SESSION_AGE=30*24*60*60*1000;
@@ -69,6 +69,11 @@ export class LocalAccounts{
  async demo(res){
   let user=this.registry.users.find(u=>u.isDemo);
   if(!user){user={id:randomUUID(),username:'jamie-demo',displayName:'Jamie Demo',isDemo:true,ownsLegacy:false,createdAt:new Date().toISOString()};await mkdir(path.join(this.userFolder(user),'images'),{recursive:true});const wardrobe=await createDemoWardrobe(this.userFolder(user));validateState(wardrobe);await atomicJSON(this.stateFile(user),wardrobe);this.registry.users.push(user);}
+  else{
+   const previous=await readFile(this.stateFile(user));const state=validateState(JSON.parse(previous.toString()));
+   const upgraded=await upgradeDemoWardrobe(this.userFolder(user),state);
+   if(upgraded.changed){validateState(upgraded.state);const backups=path.join(this.data,'backups');await mkdir(backups,{recursive:true});await writeFile(path.join(backups,`demo-before-product-photos-${Date.now()}.json`),previous,{flag:'wx'});await atomicJSON(this.stateFile(user),upgraded.state);}
+  }
   return this.session(user,res);
  }
  async state(user){return validateState(JSON.parse(await readFile(this.stateFile(user),'utf8')));}
