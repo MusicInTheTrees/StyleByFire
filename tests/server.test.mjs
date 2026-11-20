@@ -16,9 +16,10 @@ const fixtureItem=(src,id='fixture')=>({id,name:'Corrected blue shirt',category:
 async function fixture(t,{port,legacy=false}={}){
  const dir=await mkdtemp(path.join(tmpdir(),'stylebyfire-test-')),project=path.join(dir,'project'),data=path.join(dir,'data');
  await mkdir(path.join(project,'app','thumbs'),{recursive:true});await mkdir(path.join(data,'images'),{recursive:true});
- for(const name of ['server.mjs','accounts.mjs','demo.mjs','demo-catalog.mjs','web-import.mjs','inventory.mjs'])await copyFile(path.join(root,name),path.join(project,name));
+ for(const name of ['server.mjs','accounts.mjs','demo.mjs','demo-catalog.mjs','web-import.mjs','inventory.mjs','mannequin-store.mjs','mannequin-providers.mjs'])await copyFile(path.join(root,name),path.join(project,name));
  await mkdir(path.join(data,'demo-photos'),{recursive:true});for(const entry of DEMO_CATALOG)await writeFile(path.join(data,'demo-photos',demoCacheName(entry)),png);
  await copyFile(path.join(root,'app','domain.js'),path.join(project,'app','domain.js'));
+ await copyFile(path.join(root,'app','mannequin.js'),path.join(project,'app','mannequin.js'));
  await writeFile(path.join(project,'package.json'),' {"type":"module"}');await writeFile(path.join(project,'app','index.html'),'<!doctype html><title>Test fixture</title>');
  for(const filename of ['ambient-diamond.png','ambient-geometric.png','ambient-lattice.png','ambient-dots.png','sidebar-pinstripe.png','private-fixture.png'])await writeFile(path.join(project,'app',filename),png);
  let legacyBytes;
@@ -50,7 +51,7 @@ test('accounts preserve legacy corrections, isolate wardrobes and photos, and su
  assert.equal((await request('/api/auth',{headers:{Origin:'https://external.example'}})).status,403);
  const demo=await authenticate('/api/auth/demo');assert.equal(demo.user.displayName,'Jamie Demo');assert.equal(demo.user.isDemo,true);assert.equal(demo.needsSetup,true);assert.equal(demo.user.canRefreshInventory,false);
  assert.match(demo.cookieHeader,/HttpOnly/);assert.match(demo.cookieHeader,/SameSite=Strict/);
- const demoState=await (await request('/api/state',{identity:demo})).json();assert.equal(demoState.items.length,26);assert.deepEqual(new Set(demoState.items.filter(i=>i.category==='Accessories').map(accessoryType)),new Set(['tie','belt','glasses','earrings','necklace','brooch','watch','wristband','ring']));
+ const demoState=await (await request('/api/state',{identity:demo})).json();assert.equal(demoState.items.length,28);assert.deepEqual(new Set(demoState.items.filter(i=>i.category==='Accessories').map(accessoryType)),new Set(['tie','belt','glasses','earrings','necklace','brooch','watch','wristband','ring','wallet','scarf']));
  const demoPhoto=await request(demoState.items[0].src,{identity:demo});assert.equal(demoPhoto.status,200);assert.equal(demoPhoto.headers.get('cache-control'),'no-store');const demoBytes=Buffer.from(await demoPhoto.arrayBuffer());assert.deepEqual(demoBytes,png);
  for(const route of ['/media/seed-fixture.png','/thumbs/seed-fixture.png','/THUMBS/seed-fixture.png','/x%2f..%2fthumbs/seed-fixture.png'])assert.equal((await request(route,{identity:demo})).status,404,route);
  assert.equal((await request('/api/inventory/refresh',{identity:demo,method:'POST'})).status,403);
@@ -85,6 +86,6 @@ test('a clean checkout without private seed files can register and use the demo'
  const owner=await authenticate('/api/auth/register',{displayName:'Fresh Owner',username:'fresh.owner',password:'fresh-test-password'});
  assert.equal((await (await request('/api/state',{identity:owner})).json()).items.length,0);
  const refreshed=await request('/api/inventory/refresh',{identity:owner,method:'POST'});assert.equal(refreshed.status,200);assert.equal((await refreshed.json()).added,0);
- const demo=await authenticate('/api/auth/demo');const state=await (await request('/api/state',{identity:demo})).json();assert.equal(state.items.length,26);assert.equal((await request(state.items[0].src,{identity:demo})).status,200);assert.equal((await request(state.items[0].src,{identity:owner})).status,404);
+ const demo=await authenticate('/api/auth/demo');const state=await (await request('/api/state',{identity:demo})).json();assert.equal(state.items.length,28);assert.equal((await request(state.items[0].src,{identity:demo})).status,200);assert.equal((await request(state.items[0].src,{identity:owner})).status,404);
  const again=await authenticate('/api/auth/demo');assert.equal(again.user.id,demo.user.id);
 });

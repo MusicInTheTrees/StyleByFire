@@ -7,6 +7,8 @@ import {validateState} from './app/domain.js';
 import {refreshInventory} from './inventory.mjs';
 import {LocalAccounts,atomicJSON} from './accounts.mjs';
 import {previewWebsiteImport} from './web-import.mjs';
+import {listPreviews,getPreview,createPreview,completePreview,previewImage} from './mannequin-store.mjs';
+import {providerStatus,generatePreview} from './mannequin-providers.mjs';
 
 const root=path.dirname(fileURLToPath(import.meta.url));
 const data=process.env.STYLEBYFIRE_DATA_DIR?path.resolve(process.env.STYLEBYFIRE_DATA_DIR):path.join(root,'.data');
@@ -21,6 +23,22 @@ const jsonBody=async req=>JSON.parse((await body(req,16*1024)).toString());
 function imageType(bytes){if(bytes[0]===255&&bytes[1]===216&&bytes[2]===255)return 'jpg';if(bytes.subarray(0,8).equals(Buffer.from([137,80,78,71,13,10,26,10])))return 'png';if(bytes.toString('ascii',0,4)==='RIFF'&&bytes.toString('ascii',8,12)==='WEBP')return 'webp';return null;}
 let writes=Promise.resolve();
 function queued(operation){const result=writes.then(operation);writes=result.catch(()=>{});return result;}
+const mannequinJobs=new Map();
+async function generateMannequin(user,id,provider){
+ if(!['openai','local'].includes(provider))throw Object.assign(Error('Choose a configured image provider.'),{status:400});
+ const key=user.id+':'+id,existing=mannequinJobs.get(key);
+ if(existing){if(existing.provider!==provider)throw Object.assign(Error('This preview is already being generated with another provider.'),{status:423});return existing.promise;}
+ const promise=(async()=>{
+  // Read after earlier image writes so a finishing upload cannot bypass the version preflight.
+  const accountFolder=accounts.userFolder(user),preview=await queued(()=>getPreview(accountFolder,id));
+  if(preview.imageVersions>=10)throw Object.assign(Error('This preview already has 10 saved image versions.'),{status:400});
+  const references=await Promise.all(preview.references.map((_,index)=>previewImage(accountFolder,id,index)));
+  const generated=await generatePreview({provider,prompt:preview.prompt,references});
+  return queued(()=>completePreview(accountFolder,id,generated.bytes,generated.mime));
+ })();
+ mannequinJobs.set(key,{provider,promise});
+ try{return await promise;}finally{mannequinJobs.delete(key);}
+}
 const server=http.createServer(async(req,res)=>{
  try{
   const host=req.headers.host;
@@ -31,6 +49,7 @@ const server=http.createServer(async(req,res)=>{
   if(/[\\\x00-\x1f:]/.test(decoded))return send(res,403,{error:'Invalid path.'});
   const pathname=path.posix.normalize(decoded),route=pathname.toLowerCase();
   const privateMedia=route.startsWith('/media/'),privateThumb=route.startsWith('/thumbs/');
+  const mannequinAsset=/^\/api\/mannequin\/[a-f0-9-]+\/(?:image|references\/\d+)$/.test(pathname)&&['GET','HEAD'].includes(req.method);
   res.setHeader('Content-Security-Policy',"default-src 'self'; img-src 'self' data: blob:; style-src 'self' 'unsafe-inline'; script-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'self'");
   if(pathname==='/api/health'&&req.method==='GET')return send(res,200,{app:'StyleByFire',version:2,accounts:true});
   if(pathname==='/api/shutdown'&&req.method==='POST'){send(res,200,{ok:true});await writes;server.close();server.closeIdleConnections();return;}
@@ -42,9 +61,28 @@ const server=http.createServer(async(req,res)=>{
   const user=accounts.current(req);
   if(route.startsWith('/api/')||privateMedia||privateThumb){
    if(!user)return send(res,401,{error:'Sign in to open your wardrobe.'});
-   if(pathname.startsWith('/api/')&&req.headers['x-stylebyfire-account']!==user.id)return send(res,409,{error:'The active account changed in another tab. Reload this page before continuing.'});
+   if(pathname.startsWith('/api/')&&!mannequinAsset&&req.headers['x-stylebyfire-account']!==user.id)return send(res,409,{error:'The active account changed in another tab. Reload this page before continuing.'});
   }
   if(pathname==='/api/state'&&req.method==='GET')return send(res,200,await accounts.state(user));
+  if(pathname==='/api/mannequin/providers'&&req.method==='GET')return send(res,200,await providerStatus());
+  if(pathname==='/api/mannequin'&&req.method==='GET')return send(res,200,{previews:await listPreviews(accounts.userFolder(user))});
+  if(pathname==='/api/mannequin'&&req.method==='POST'){
+   const input=await jsonBody(req);
+   const preview=await queued(async()=>createPreview({userFolder:accounts.userFolder(user),state:await accounts.state(user),itemIds:input?.itemIds,mode:input?.mode,bodyShape:input?.bodyShape,pose:input?.pose,resolveSource:src=>accounts.mediaFile(user,src)}));
+   return send(res,preview.reused?200:201,preview);
+  }
+  const mannequinRoute=pathname.match(/^\/api\/mannequin\/([a-f0-9-]+)(?:\/(image|generate|references\/([0-9]+)))?$/);
+  if(mannequinRoute){
+   const [,id,asset,index]=mannequinRoute,accountFolder=accounts.userFolder(user);
+   if(!asset&&req.method==='GET')return send(res,200,await getPreview(accountFolder,id));
+   if(asset&&asset!=='generate'&&['GET','HEAD'].includes(req.method)){const image=await previewImage(accountFolder,id,index===undefined?undefined:Number(index));res.writeHead(200,{'Content-Type':image.mime,'Cache-Control':'no-store','X-Content-Type-Options':'nosniff'});return res.end(req.method==='HEAD'?undefined:image.bytes);}
+   if(asset==='image'&&req.method==='POST'){
+    const bytes=await body(req,20*1024*1024);
+    return send(res,200,await queued(()=>{if(mannequinJobs.has(user.id+':'+id))throw Object.assign(Error('Wait for this preview to finish generating before uploading an image.'),{status:423});return completePreview(accountFolder,id,bytes);}));
+   }
+   if(asset==='generate'&&req.method==='POST'){const input=await jsonBody(req);return send(res,200,await generateMannequin(user,id,input?.provider));}
+   return send(res,405,{error:'Method not allowed.'});
+  }
   if(pathname==='/api/web-import/preview'&&req.method==='POST'){
    const input=await jsonBody(req);
    const result=await previewWebsiteImport({url:input?.url,saveImage:async(bytes,extension)=>{

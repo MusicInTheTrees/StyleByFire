@@ -24,15 +24,15 @@ test('leggings alone can fill bottom slot',()=>{const items=[make('shirt','Top')
 test('duplicate pinned base tops are rejected',()=>assert.ok(validateLocks([make('a','Top'),make('b','Top')]).length));
 test('ties remain Accessories and can be pinned alongside belts and watches',()=>{assert.ok(DEFAULT_SUBCATEGORIES.some(s=>s.category==='Accessories'&&s.path==='Ties / Neckties'));const accessories=[make('tie','Accessories',{subcategory:'Ties / Neckties'}),make('belt','Accessories',{subcategory:'Belts'}),make('watch','Accessories',{subcategory:'Watches'})];const result=run([...base(),...accessories],accessories.map(i=>i.id));assert.equal(result.complete,true);assert.deepEqual(result.errors,[]);for(const piece of accessories)assert.ok(result.items.some(i=>i.id===piece.id));});
 
-const accessoryPaths={tie:'Ties / Neckties',belt:'Belts',glasses:'Glasses',earrings:'Jewelry / Earrings',necklace:'Jewelry / Necklaces',brooch:'Jewelry / Brooches',watch:'Watches',wristband:'Wristbands',ring:'Jewelry / Rings'};
+const accessoryPaths={tie:'Ties / Neckties',belt:'Belts',glasses:'Glasses',earrings:'Jewelry / Earrings',necklace:'Jewelry / Necklaces',brooch:'Jewelry / Brooches',watch:'Watches',wristband:'Wristbands',ring:'Jewelry / Rings',wallet:'Wallets',scarf:'Scarves'};
 const fullAccessories=()=>Object.entries(accessoryPaths).map(([id,subcategory])=>make(id,'Accessories',{subcategory}));
-test('all nine accessory types can join a look, including when the tie is pinned',()=>{
+test('all eleven accessory types can join a look, including when the tie is pinned',()=>{
   const accessories=fullAccessories();
   for(const locks of [[],['tie']]){
     const result=run([...base(),...accessories],locks);
     assert.deepEqual(result.items.filter(i=>i.category==='Accessories').map(accessoryType).sort(),Object.keys(accessoryPaths).sort());
     assert.equal(result.items.filter(i=>i.id==='tie').length,1);
-    assert.ok(result.reasons.some(r=>r.includes('9 accessories')));
+    assert.ok(result.reasons.some(r=>r.includes('11 accessories')));
   }
 });
 test('automatic neckwear chooses one of ties, bow ties, and ascots while retaining other accessory groups',()=>{
@@ -40,7 +40,7 @@ test('automatic neckwear chooses one of ties, bow ties, and ascots while retaini
   for(let s=0;s<15;s++){
     const result=generateOutfit(items,'Casual',DEFAULT_RULES.Casual,profile,[],s);
     assert.equal(result.items.filter(i=>accessoryType(i)==='tie').length,1);
-    assert.equal(result.items.filter(i=>i.category==='Accessories').length,9);
+    assert.equal(result.items.filter(i=>i.category==='Accessories').length,11);
   }
 });
 test('accessory categorization prefers subcategories and supports familiar labels and spelling',()=>{
@@ -52,6 +52,7 @@ test('accessory categorization prefers subcategories and supports familiar label
   assert.equal(accessoryType(make('Silver watch','Accessories')),'watch');
   assert.equal(accessoryType(make('Broach','Accessories')),'brooch');
   assert.equal(accessoryType(make('Leather bracelet','Accessories')),'wristband');
+  for(const [label,type] of [['Eye wear','glasses'],['Earing','earrings'],['Wrist bands','wristband'],['Scarfs','scarf'],['Wallet','wallet']])assert.equal(accessoryType(make(label,'Accessories')),type);
   assert.equal(accessoryType(make('Ring pattern shirt','Top')),null);
 });
 test('accessories respect mode, exclusions, and the automatic accessories toggle without dropping pins',()=>{

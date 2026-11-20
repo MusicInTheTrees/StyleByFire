@@ -32,7 +32,7 @@ The sign-in and registration forms support browser password managers, so you can
 
 - **Outfit designer:** choose Casual, Sport, Business, or Red carpet. The selected outfit is the primary workspace, with large piece previews above the clothing picker. A blue-and-gray interface keeps attention on your clothing's actual colors.
 - **Pin required pieces:** create or remix around the items you want to wear. Conflicting pins and missing essentials are explained. New pins leave the current outfit visible until you remix it.
-- **Combine accessories:** ties, belts, glasses, earrings, necklaces, brooches, watches, wristbands, and rings can appear together. Automatic selection chooses eligible pieces across accessory types instead of stopping after one accessory. Ties include neckties, bow ties, and ascots; automatic selection avoids adding several ties at once. Pin multiple accessories when you want a specific combination.
+- **Combine accessories:** ties, belts, eyewear, earrings, necklaces, brooches, watches, wristbands, rings, wallets, and scarves can appear together. Automatic selection chooses eligible pieces across accessory types instead of stopping after one accessory. Ties include neckties, bow ties, and ascots; automatic selection avoids adding several ties at once. Common labels such as eye wear, earing, wrist bands, and scarfs are recognized. Pin multiple accessories when you want a specific combination.
 - **See the reasoning:** the color story shows the outfit's color families. Stylist notes explain the choices and flag tradeoffs such as extra patterns, colors, or pieces outside a mode's guidelines.
 - **Dresses and layers:** a Top with the Dress role fills both Top and Bottom. Outerwear stays under Top; leggings stay under Bottom and can form a base or an underlayer.
 - **Save combinations:** keep complete or unfinished outfits in the lookbook and reopen them with their pieces pinned.
@@ -40,6 +40,24 @@ The sign-in and registration forms support browser password managers, so you can
 The Personal stylist uses editable controls for favorite pieces, preferred and excluded tags, color direction, experimentation, warmth, and dresses versus separates. **Exclude socks from the pattern limit** applies to every occasion: sock patterns do not use the pattern allowance in suggestions or warnings, while their colors follow the color-limit preference. These preferences are off by default and saved separately for each account. **Exclude neutral colors from the color limit** omits the colors selected in **My neutral colors** (defaults: Black, White, Gray, Light gray, Navy, Brown, and Tan) from both color-limit warnings and recommendation penalties. Choose any palette colors as neutrals, clear the selection to count every color, or restore the defaults. Your selection also defines neutral foundations for balanced styling. All colors stay visible in the color story; tonal and expressive matching still consider them. The Style playbook lets you change each mode's formality range, color and pattern preferences, socks requirement, outer layer, and accessory suggestions. Recommendations are transparent rules, not a generative AI service. Freeform notes are a notebook; they do not automatically change the recommendation rules.
 
 Business starts as business casual. A completed outfit means its essential slots are filled, not that it meets every workplace or event's dress code. Confirm formal requirements against the invitation or venue.
+
+## Preview on a mannequin
+
+In Outfit designer, choose **Preview on mannequin**. Pick a straight, broad, or curved mannequin and prepare the current outfit. The large preview sits beside a list of every selected piece, including layers and accessories. Preview history belongs to the signed-in account; opening an older preview shows its original outfit snapshot rather than silently substituting today's clothes.
+
+Three generation routes are available:
+
+- **Codex-assisted (default):** prepare the outfit, copy its request into a Codex chat with this repository open, then refresh after the generated image has been attached. This route does not require an API key and does not automatically run Codex from the browser. You can also attach a generated JPEG, PNG, or WebP yourself.
+- **Local ComfyUI:** connect an installed local model and an API-format image-editing workflow. The app uploads all selected references to the loopback service, queues the workflow, and saves the output. This is an advanced setup route; StyleByFire does not bundle or install model weights. Readiness shows whether the configured local engine is running.
+- **OpenAI API (optional):** enable a server API key to generate from the preview screen. This is separately billed and is never needed for the wardrobe or assisted route. Photos and styling corrections go to OpenAI only when Generate is pressed with this route selected. A configured key is shared by this local installation's signed-in accounts.
+
+See [engine setup](docs/mannequin-engines.md) and the [ComfyUI workflow adapter guide](docs/comfyui-workflow-adapter.md). Keys stay on the server and are never returned to the browser. Missing configuration and provider failures produce actionable messages; requests can be retried without losing a saved result.
+
+Previews use a private copy of the original clothing photos plus the saved color labels, descriptions, and styling corrections. Personal notes and stylist-profile notes are excluded. Photo-studio adjustments are retained in the snapshot for traceability but are not baked into the reference pixels; explicit color corrections guide the model. Every selected accessory remains in the reference list. Scarves drape around the neck; wallets may be concealed in a pocket in the generated image. Preview images are styling illustrations, not a prediction of exact fit, sizing, garment construction, or pattern reproduction.
+
+Each account can keep 100 distinct outfit snapshots and up to 10 image versions per snapshot. Repeating identical inputs reopens the existing snapshot. Requests accept up to 20 pieces, with an OpenAI limit of 16 references; no route silently drops excess accessories. Download the displayed result to keep a separate copy. Mannequin snapshots and results live under the account's private mannequin folder and are not included in the wardrobe JSON backup.
+
+For a local Codex assistant, inspect a request with `node scripts/mannequin.mjs <username> <preview-id>`. The output supplies its prompt and ordered reference paths without account credentials. Inspect all references, generate the actual image, then attach it with `node scripts/mannequin.mjs <username> <preview-id> <generated-image-file>`. This helper makes no model calls and preserves the original photos.
 
 ## Background patterns
 
@@ -78,7 +96,7 @@ Account credentials and hashed session identifiers are stored in `.data/accounts
 
 Existing installations may also have original photos in `ClothingImages/`, a private catalog in `seed.json`, and small previews in `app/thumbs/`. These files, `.data/`, local QA files, and exported wardrobe backups are excluded from Git. The published repository contains application code, generated background artwork, and demo metadata. Changing a seed catalog does not overwrite an already-saved wardrobe.
 
-The app sends no clothing photos to an external service, uses no analytics or remote fonts, and needs no model API. Website imports and initial demo setup contact the selected retailers to download public pages or photos; retailers receive ordinary web requests. Clicking a source link also opens its external website. Downloaded product photos stay local, and their copyright remains with their respective owners. Attribution is not a license to redistribute them; retailer photos are not committed to this repository.
+The wardrobe uses no analytics or remote fonts and needs no model API. Mannequin generation is optional: the API route sends selected photos and styling corrections to OpenAI, the local route sends them to the configured loopback ComfyUI service, and the assisted route uses the image service available in your Codex chat. ComfyUI keeps its own input/output copies outside the app account boundary; use a trusted local workflow and installation. Website imports and initial demo setup contact the selected retailers to download public pages or photos; retailers receive ordinary web requests. Clicking a source link also opens its external website. Downloaded product photos stay local, and their copyright remains with their respective owners. Attribution is not a license to redistribute them; retailer photos are not committed to this repository.
 
 Use one editing tab per account: concurrent edits are not merged. Browser storage is not the source of truth.
 
@@ -86,7 +104,7 @@ Use one editing tab per account: concurrent edits are not merged. Browser storag
 
 Color adjustments and the nearest-color sampler are visual aids, not calibrated color measurements. A colored photo background is useful for comparison but is not a neutral gray card. Flash glare and clipped detail cannot always be recovered. Compare the garment in daylight; for repeatable accuracy, photograph a neutral gray card under the same light.
 
-New imports start with unverified labels. Review color, pattern, formality, and modes before relying on recommendations. This version does not include automatic garment recognition, background removal, or virtual try-on.
+New imports start with unverified labels. Review color, pattern, formality, and modes before relying on recommendations. This version does not include automatic garment recognition, reusable garment cutouts, or measured virtual try-on. Mannequin previews generate an approximate view of the chosen outfit.
 
 Styling defaults draw on [Emily Post's attire guide](https://emilypost.com/advice/attire-guide-dress-codes-from-casual-to-white-tie), [Emily Post's business-casual guide](https://emilypost.com/advice/business-casual-attire-guide), [REI's running-clothing guide](https://www.rei.com/learn/expert-advice/running-clothing.html), and the [Festival de Cannes event FAQ](https://www.festival-cannes.com/en/faq/). The latter illustrates event-specific requirements, not a universal red-carpet rule. Pattern and color-count limits are adjustable styling preferences.
 
@@ -97,7 +115,7 @@ npm test
 node --check app/app.js
 ```
 
-The 40 automated tests cover outfit rules, inventory refresh, local HTTP/account behavior, website-import URL and DNS validation, redirect and response-size limits, product metadata, and real-photo demo upgrades and offline use. Integration tests use isolated temporary data directories rather than your saved wardrobe.
+The automated tests cover outfit rules and accessory combinations, inventory refresh, custom neutral colors and bulk edits, account isolation, mannequin snapshots and provider contracts, website-import URL and DNS validation, redirect and response-size limits, product metadata, and real-photo demo upgrades and offline use. Provider tests mock image services; they do not require API spending or an installed local model. Integration tests use isolated temporary data directories rather than your saved wardrobe.
 
 - `PORT` changes the listening port.
 - `STYLEBYFIRE_DATA_DIR` selects a separate data directory for isolated QA.

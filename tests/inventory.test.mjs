@@ -7,6 +7,7 @@ import {inferLabels,refreshInventory} from '../inventory.mjs';
 import {DEFAULT_PROFILE,DEFAULT_RULES,validateState} from '../app/domain.js';
 test('folder taxonomy handles ties, flat caps, dress shoes, and sport coats',()=>{
  assert.equal(inferLabels('ClothingImages/Accessories/Ties/tie.jpg').category,'Accessories');
+ for(const folder of ['Wallets','Scarves','Scarfs','WristBands','Necklaces','Earrings','Earings','Watches','Eyewear','Eye Wear'])assert.equal(inferLabels(`ClothingImages/${folder}/piece.jpg`).category,'Accessories',folder);
  assert.equal(inferLabels('ClothingImages/Caps/Scally/cap.jpg').category,'Cap');
  assert.equal(inferLabels('ClothingImages/Shoes/Dress/shoe.jpg').category,'Shoes');
  assert.equal(inferLabels('ClothingImages/Jackets/SportsJackets/coat.jpg').role,'outerwear');

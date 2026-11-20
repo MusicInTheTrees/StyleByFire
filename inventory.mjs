@@ -9,7 +9,7 @@ export function inferLabels(relative){
  const labels={category:'Top',role:'base',subcategory:folders.map(pretty).join(' / '),modes:['Casual'],formality:2};
  if(['caps','cap','hats'].includes(root)){labels.category='Cap';labels.subcategory=rest.join(' / ');}
  else if(['shoes','footwear'].includes(root)){labels.category='Shoes';labels.subcategory=rest.join(' / ');if(rest.some(s=>/dress/i.test(s))){labels.formality=3;labels.modes=['Casual','Business'];}}
- else if(['accessories','belts','ties'].includes(root)){labels.category='Accessories';labels.subcategory=(root==='accessories'?rest:folders.map(pretty)).join(' / ');if(/tie/i.test(labels.subcategory)){labels.formality=3;labels.modes=['Casual','Business'];}}
+ else if(['accessories','belts','ties','wallets','scarves','scarfs','wristbands','wrist bands','necklaces','earrings','earings','watches','eyewear','eye wear','glasses','sunglasses','rings','brooches','broaches'].includes(root)){labels.category='Accessories';labels.subcategory=(root==='accessories'?rest:folders.map(pretty)).join(' / ');if(/tie/i.test(labels.subcategory)){labels.formality=3;labels.modes=['Casual','Business'];}}
  else if(root==='socks'){labels.category='Socks';labels.subcategory=rest.join(' / ');labels.modes=['Casual','Business'];}
  else if(['pants','bottom','bottoms','skirts','leggings'].includes(root)){labels.category='Bottom';labels.role=root==='leggings'?'leggings':'base';labels.modes=['Casual','Business'];}
  else if(['jackets','outerwear'].includes(root)){labels.role='outerwear';labels.subcategory=['Outerwear',...rest].join(' / ');labels.modes=['Casual','Business'];}

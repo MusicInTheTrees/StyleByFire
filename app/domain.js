@@ -6,7 +6,7 @@ export const DEFAULT_SUBCATEGORIES = [
   ...['Pants / Slacks','Skirts','Leggings'].map(path=>({category:'Bottom',path})),
   ...['Dress socks','Athletic socks'].map(path=>({category:'Socks',path})),
   ...['Sneakers','Dress shoes','Boots','Sandals'].map(path=>({category:'Shoes',path})),
-  ...['Ties / Neckties','Ties / Bow ties','Ties / Ascots','Belts','Glasses','Jewelry / Earrings','Jewelry / Necklaces','Jewelry / Brooches','Jewelry / Rings','Watches','Wristbands'].map(path=>({category:'Accessories',path}))
+  ...['Ties / Neckties','Ties / Bow ties','Ties / Ascots','Belts','Glasses','Eyewear / Sunglasses','Jewelry / Earrings','Jewelry / Necklaces','Jewelry / Brooches','Jewelry / Rings','Watches','Wristbands','Wallets','Scarves'].map(path=>({category:'Accessories',path}))
 ];
 export const PALETTE = { Black:'#292929', White:'#ece8df', Gray:'#777974', 'Light gray':'#d5d7d4', Navy:'#343e5c', Blue:'#526c8f', Turquoise:'#40b5b0', Brown:'#745642', Tan:'#b19c78', Olive:'#737860', Green:'#426256', Burgundy:'#854a4b', Red:'#b64b40', Pink:'#ce929f', Purple:'#776081', Yellow:'#c5ab53', Orange:'#ce804f' };
 export const DEFAULT_RULES = {
@@ -17,17 +17,19 @@ export const DEFAULT_RULES = {
 };
 export const DEFAULT_PROFILE = { name:'My personal stylist', palette:'balanced', favoriteBias:4, adventure:3, warmth:1, silhouette:'either', preferredTags:[], avoidTags:[], ignoreSockPatterns:false, ignoreNeutralColors:false, notes:'' };
 export const DEFAULT_ADJUSTMENTS = { exposure:0, contrast:0, saturation:0, temperature:0, tint:0, rotation:0, crop:null };
-export const ACCESSORY_LABELS = Object.freeze({tie:'Tie',belt:'Belt',glasses:'Glasses',earrings:'Earrings',necklace:'Necklace',brooch:'Brooch',watch:'Watch',wristband:'Wristband',ring:'Ring',other:'Accessory'});
+export const ACCESSORY_LABELS = Object.freeze({tie:'Tie',belt:'Belt',glasses:'Eyewear',earrings:'Earrings',necklace:'Necklace',brooch:'Brooch',watch:'Watch',wristband:'Wristband',ring:'Ring',wallet:'Wallet',scarf:'Scarf',other:'Accessory'});
 const accessoryMatchers = [
   ['tie', /\b(?:ties?|neckties?|bow\s*ties?|ascots?|neckwear)\b/i],
   ['belt', /\bbelts?\b/i],
-  ['glasses', /\b(?:glasses|sunglasses|eyewear)\b/i],
-  ['earrings', /\bearrings?\b/i],
+  ['glasses', /\b(?:glasses|sunglasses|eye\s*wear|spectacles)\b/i],
+  ['earrings', /\b(?:earrings?|earings?)\b/i],
   ['necklace', /\bnecklaces?\b/i],
   ['brooch', /\b(?:brooch(?:es)?|broach(?:es)?)\b/i],
   ['watch', /\bwatch(?:es)?\b/i],
   ['wristband', /\b(?:wrist\s*bands?|bracelets?)\b/i],
-  ['ring', /\brings?\b/i]
+  ['ring', /\brings?\b/i],
+  ['wallet', /\b(?:wallets?|billfolds?|card\s*holders?)\b/i],
+  ['scarf', /\b(?:scar(?:f|fs|ves)|mufflers?)\b/i]
 ];
 export function accessoryType(item) {
   if(item.category!=='Accessories')return null;
