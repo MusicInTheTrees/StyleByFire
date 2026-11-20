@@ -1,0 +1,14 @@
+.data/
+.work/
+node_modules/
+*.log
+wardrobe-backup-*.json
+# Personal photographs and the local seed catalog are never source code.
+ClothingImages/
+app/thumbs/
+seed.json
+.env
+.env.*
+!.env.example
+__pycache__/
+scripts/prepare_photos.py
