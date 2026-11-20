@@ -14,7 +14,7 @@ The reference strip can display the saved photo adjustments, but generation curr
 
 ## Codex-assisted
 
-Choose the assisted route when you do not want to configure another engine. Prepare the current selection, use its copied Codex request in this chat, and let Codex generate the image from the saved references. The app cannot invoke the chat's image-generation tool by itself. Refresh the preview after the result is attached. A prepared request alone is not a generated image.
+Choose the assisted route when you do not want to configure another engine. Prepare the current selection, use its copied Codex request in this chat, and let Codex generate the image from the saved references. The app cannot invoke the chat's image-generation tool by itself. The manual builder can automatically prepare a request after two seconds without changes and watch for the result every five seconds while the designer is visible. Copy the inline request into Codex; the completed image appears automatically after it is attached. Turn this behavior off in the manual builder if you prefer explicit preparation and refresh. A prepared request alone is not a generated image, and the app cannot automatically send messages to Codex or invoke its chat image tool.
 
 ## Set up local generation on Windows
 

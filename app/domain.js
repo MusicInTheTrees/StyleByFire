@@ -143,6 +143,7 @@ export function generateOutfit(allItems, mode, rules, profile, lockedIds=[], see
 }
 export function validateState(state) {
   if(!state||state.version!==1||!Array.isArray(state.items)||!Array.isArray(state.looks)||!state.profile||!state.rules||!Array.isArray(state.subcategories)) throw Error('This is not a valid StyleByFire wardrobe.');
+  if(state.categorySetup!==undefined&&(!state.categorySetup||typeof state.categorySetup!=='object'||Array.isArray(state.categorySetup)||state.categorySetup.version!==1||!['dismissed','installed'].includes(state.categorySetup.status)))throw Error('Invalid category setup preference.');
   // Upgrade old accounts and JSON backups once. Later manual suitability edits stay authoritative.
   if(!Object.hasOwn(state.rules,'Golf')){
     state.rules.Golf=structuredClone(DEFAULT_GOLF_RULES);

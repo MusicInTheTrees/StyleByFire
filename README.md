@@ -28,6 +28,12 @@ Accounts live on this computer, with no email verification, cloud sync, or passw
 
 The sign-in and registration forms support browser password managers, so you can save your login and autofill it later. Your browser controls whether a Save prompt appears; it is not guaranteed in every browser or profile. In Brave, enable **Offer to Save Passwords** in its Password Manager settings and check that this app is not in the declined-sites list. See [Brave's password-manager guide](https://support.brave.app/hc/en-us/articles/360018185951-How-do-I-use-the-built-in-password-manager). A successful local session lasts up to 30 days, so reopening the app normally keeps you signed in unless you sign out or clear its cookies.
 
+## Set up the category tree
+
+After sign-in, an account banner offers **Preview category tree** until you install it or choose **Not now**. Preview the full tree, then add its missing paths beneath Cap, Top, Bottom, Socks, Shoes, and Accessories. Existing custom categories, clothing, notes, colors, and saved looks stay intact. The setup is additive and can be repeated safely. **My wardrobe → Organize categories → Set up full category tree** reopens it after dismissal. Nested folders expand and collapse in Organize categories.
+
+This is an in-app category tree, saved separately for each account; it does not create, move, or rename folders on disk. Dresses stay within Top, leggings within Bottom, and all accessory types remain beneath Accessories. Installation/dismissal is saved with the wardrobe, including backups.
+
 ## Build a look
 
 - **Outfit designer:** choose Casual, Sport, Golf, Business, or Red carpet. The selected outfit is the primary workspace, with a large mannequin preview first and individual pieces above the clothing picker. A blue-and-gray interface keeps attention on your clothing's actual colors.
@@ -52,7 +58,7 @@ The playbook includes classic, tonal and patterned outfit ideas, plus source lin
 
 ## Preview on a mannequin
 
-Outfit designer puts the saved mannequin image first, with the selected clothing and accessories underneath. The image appears only when it matches the current pieces, occasion, photo edits, and saved color corrections. A changed selection shows a new-preview prompt instead of an outdated image. Use **Create mannequin preview** or **Preview options** to pick a straight, broad, or curved mannequin and prepare the current outfit; **Refresh preview** checks for an image saved by Codex. When no working outfit is remembered in this browser, the latest completed preview supplies the starting selection. Preview history belongs to the signed-in account; opening an older preview shows its original outfit snapshot rather than silently substituting today's clothes.
+Outfit designer puts the saved mannequin image first, with the selected clothing and accessories underneath. The image appears only when it matches the current pieces, occasion, photo edits, and saved color corrections. A changed selection clears any outdated image. In the manual builder, **Automatically prepare mannequin updates** is on by default and can be turned off separately for each account in this browser. After two seconds without another change, a valid top-and-bottom or dress selection is saved as a Codex-assisted request. Copy its message and send it to Codex. The app checks every five seconds while the designer is visible and automatically displays the matching completed image. It reuses existing results, stops checking on account/page changes, and resumes when you return. It never calls a billed image API or starts a local model as part of this setting. Use **Create mannequin preview** or **Preview options** to pick a straight, broad, or curved mannequin and prepare the current outfit; **Refresh preview** retries checking after a connection error or when automatic updates are off. When no working outfit is remembered in this browser, the latest completed preview supplies the starting selection. Preview history belongs to the signed-in account; opening an older preview shows its original outfit snapshot rather than silently substituting today's clothes.
 
 Three generation routes are available:
 
