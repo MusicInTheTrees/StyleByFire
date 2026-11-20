@@ -37,7 +37,7 @@ The sign-in and registration forms support browser password managers, so you can
 - **Dresses and layers:** a Top with the Dress role fills both Top and Bottom. Outerwear stays under Top; leggings stay under Bottom and can form a base or an underlayer.
 - **Save combinations:** keep complete or unfinished outfits in the lookbook and reopen them with their pieces pinned.
 
-The Personal stylist uses editable controls for favorite pieces, preferred and excluded tags, color direction, experimentation, warmth, and dresses versus separates. **Exclude socks from the pattern limit** applies to every occasion: sock patterns do not use the pattern allowance in suggestions or warnings, while their colors follow the color-limit preference. These preferences are off by default and saved separately for each account. **Exclude neutral colors from the color limit** omits Black, White, Gray, Light gray, Navy, Brown, and Tan from both color-limit warnings and recommendation penalties. All colors stay visible in the color story; tonal and expressive matching still consider them. The Style playbook lets you change each mode's formality range, color and pattern preferences, socks requirement, outer layer, and accessory suggestions. Recommendations are transparent rules, not a generative AI service. Freeform notes are a notebook; they do not automatically change the recommendation rules.
+The Personal stylist uses editable controls for favorite pieces, preferred and excluded tags, color direction, experimentation, warmth, and dresses versus separates. **Exclude socks from the pattern limit** applies to every occasion: sock patterns do not use the pattern allowance in suggestions or warnings, while their colors follow the color-limit preference. These preferences are off by default and saved separately for each account. **Exclude neutral colors from the color limit** omits the colors selected in **My neutral colors** (defaults: Black, White, Gray, Light gray, Navy, Brown, and Tan) from both color-limit warnings and recommendation penalties. Choose any palette colors as neutrals, clear the selection to count every color, or restore the defaults. Your selection also defines neutral foundations for balanced styling. All colors stay visible in the color story; tonal and expressive matching still consider them. The Style playbook lets you change each mode's formality range, color and pattern preferences, socks requirement, outer layer, and accessory suggestions. Recommendations are transparent rules, not a generative AI service. Freeform notes are a notebook; they do not automatically change the recommendation rules.
 
 Business starts as business casual. A completed outfit means its essential slots are filled, not that it meets every workplace or event's dress code. Confirm formal requirements against the invitation or venue.
 
@@ -60,6 +60,17 @@ Open an item to rotate its image or add **Personal notes** and **Styling & color
 Photo studio provides exposure, contrast, saturation, temperature, tint, rotation, cropping, original-image comparison, and color-family sampling. Adjustments are stored separately; original images are not rewritten. Starting a crop resets rotation and the previous crop so the crop coordinates remain predictable.
 
 For an existing personal installation, **Refresh inventory** scans nested folders under `ClothingImages/`, adds new files, and preserves notes, corrected labels, favorites, rotations, and saved looks. This source-folder access belongs to the account that claims the original wardrobe. Other accounts, including Jamie Demo, import their own images instead.
+
+## Wardrobe cleanup
+
+Select pieces using the checkbox on each wardrobe photo, or filter the collection and choose **Select visible**. Selection persists across filters; the selected-piece list includes hidden selections. **Edit selected** supports bulk primary/secondary colors, patterns, verification, formality, warmth, favorites, subcategories, and suitable occasions. Unchanged fields keep their existing values.
+
+- Add or remove tags across selected pieces, matching tags without case sensitivity.
+- Append personal notes or styling corrections without replacing existing notes.
+- Rotate selected photos by 90°, 180°, or 270° without rewriting originals.
+- Find colors to verify, correction notes, missing subcategories, and missing occasions with **Review filter**.
+- Mark pieces **Ready to wear**, **In laundry**, **Needs repair**, or **Archived**. Unavailable pieces stay saved, including photos and saved-look references; new suggestions skip them and pinned conflicts explain why.
+- Preview before applying. **Undo last bulk edit** restores the last batch during the current session; it refuses to overwrite subsequent edits to affected pieces. Reloading or switching accounts clears that undo history. Export a backup for long-term recovery.
 
 ## Data, backups, and privacy
 

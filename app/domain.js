@@ -46,6 +46,7 @@ export function slotFor(item) {
 export function validateLocks(items, avoidTags=[]) {
   const errors=[]; const counts={}; const slots=items.map(slotFor);
   for (const item of items) {
+    if(item.availability&&item.availability!=='ready')errors.push(`${item.name} is ${AVAILABILITY[item.availability].toLowerCase()}. Mark it ready to wear or unpin it.`);
     const s=slotFor(item); counts[s]=(counts[s]||0)+1;
     if (s!=='accessory' && counts[s]>1) errors.push(`Choose only one required ${s} piece.`);
     if (item.tags.some(t=>avoidTags.map(x=>x.toLowerCase()).includes(t.toLowerCase()))) errors.push(`${item.name} has a tag your stylist excludes. Remove that exclusion or unpin this piece.`);
@@ -54,8 +55,9 @@ export function validateLocks(items, avoidTags=[]) {
   return [...new Set(errors)];
 }
 export const NEUTRAL_COLORS = Object.freeze(['Black','White','Gray','Light gray','Navy','Brown','Tan']);
-const neutral = new Set(NEUTRAL_COLORS);
-const countedColors=(colors,profile)=>colors.filter(c=>!(profile.ignoreNeutralColors===true&&neutral.has(c)));
+export const neutralColors=profile=>profile.neutralColors??NEUTRAL_COLORS;
+export const AVAILABILITY = Object.freeze({ready:"Ready to wear",laundry:"In laundry",repair:"Needs repair",archived:"Archived"});
+const countedColors=(colors,profile)=>colors.filter(c=>!(profile.ignoreNeutralColors===true&&neutralColors(profile).includes(c)));
 export const itemColors=item=>[...new Set([item.color,item.secondaryColor].filter(Boolean))];
 const countsTowardPatternLimit=(item,profile)=>item.pattern!=='Solid'&&!(profile.ignoreSockPatterns===true&&item.category==='Socks');
 export function assessOutfit(items, mode, rules, profile) {
@@ -67,6 +69,7 @@ export function assessOutfit(items, mode, rules, profile) {
   if(!slots.includes('shoes')) missing.push('Shoes');
   if(rules.requireSocks&&!slots.includes('socks')) missing.push('Socks');
   for(const item of items) {
+    if(item.availability&&item.availability!=='ready')warnings.push(`${item.name} is ${AVAILABILITY[item.availability].toLowerCase()}.`);
     if(!item.modes.includes(mode)) warnings.push(`${item.name} is not marked for ${mode.toLowerCase()} looks.`);
     if(item.formality<rules.minFormality||item.formality>rules.maxFormality) warnings.push(`${item.name} is outside this mode’s preferred formality range.`);
   }
@@ -84,7 +87,7 @@ export function assessOutfit(items, mode, rules, profile) {
   if(items.some(i=>i.favorite)) reasons.push('Includes pieces you have favorited.');
   if(patterns<=rules.maxPatterns) reasons.push(`Keeps pattern mixing within your ${rules.maxPatterns}-piece preference.`);
   if(profile.ignoreSockPatterns===true&&items.some(i=>i.category==='Socks'&&i.pattern!=='Solid')) reasons.push(profile.ignoreNeutralColors?'Sock patterns are excluded from your pattern limit. Sock colors follow your color-limit preference.':'Sock patterns are excluded from your pattern limit. Their colors still count.');
-  if(profile.ignoreNeutralColors&&colors.some(c=>neutral.has(c))) reasons.push(`Neutral colors are excluded: ${limitedColors.length} of your ${rules.maxColors} color allowance used. All colors remain in the color story.`);
+  if(profile.ignoreNeutralColors&&colors.some(c=>neutralColors(profile).includes(c))) reasons.push(`Neutral colors are excluded: ${limitedColors.length} of your ${rules.maxColors} color allowance used. All colors remain in the color story.`);
   if(limitedColors.length&&limitedColors.length<=rules.maxColors) reasons.push(`Builds around ${limitedColors.join(', ').toLowerCase()} within your color limit.`);
   if(items.some(i=>i.tags.some(t=>profile.preferredTags.includes(t)))) reasons.push('Brings in your preferred style tags.');
   if(slots.includes('dress')) reasons.push('One dress covers both Top and Bottom; layers stay optional.');
@@ -98,7 +101,7 @@ export function generateOutfit(allItems, mode, rules, profile, lockedIds=[], see
   const errors=validateLocks(selected,profile.avoidTags);
   if(errors.length) return {items:selected,errors,missing:[],warnings:[],reasons:[],complete:false};
   const excluded=profile.avoidTags.map(s=>s.toLowerCase());
-  const eligible=allItems.filter(i=>i.modes.includes(mode)&&i.formality>=rules.minFormality&&i.formality<=rules.maxFormality&&!i.tags.some(t=>excluded.includes(t.toLowerCase())));
+  const eligible=allItems.filter(i=>(!i.availability||i.availability==='ready')&&i.modes.includes(mode)&&i.formality>=rules.minFormality&&i.formality<=rules.maxFormality&&!i.tags.some(t=>excluded.includes(t.toLowerCase())));
   const has=s=>selected.some(i=>slotFor(i)===s);
   function pick(slot,type=null) {
     const matches=i=>slotFor(i)===slot&&(type===null||accessoryType(i)===type);
@@ -107,7 +110,7 @@ export function generateOutfit(allItems, mode, rules, profile, lockedIds=[], see
     const colors=new Set(selected.flatMap(itemColors)); const patterns=selected.filter(i=>countsTowardPatternLimit(i,profile)).length;
     const limitColors=countedColors([...colors],profile);
     const rank=i=>{const pieceColors=itemColors(i),newColors=pieceColors.filter(c=>!colors.has(c)).length,newCountedColors=countedColors(pieceColors,profile).filter(c=>!colors.has(c)).length;return (i.favorite?profile.favoriteBias:0)+i.tags.filter(t=>profile.preferredTags.includes(t)).length*3
-      +(profile.palette==='tonal'?6*(pieceColors.length-newColors)/pieceColors.length:profile.palette==='balanced'?(pieceColors.every(c=>neutral.has(c))?2:0):3*newColors/pieceColors.length)
+      +(profile.palette==='tonal'?6*(pieceColors.length-newColors)/pieceColors.length:profile.palette==='balanced'?(pieceColors.every(c=>neutralColors(profile).includes(c))?2:0):3*newColors/pieceColors.length)
       -(countsTowardPatternLimit(i,profile)&&patterns>=rules.maxPatterns?12:0)
       -(newCountedColors>0&&limitColors.length+newCountedColors>rules.maxColors?8:0)
       -Math.abs((i.warmth??1)-profile.warmth)*2+random()*(2+profile.adventure*2);};
@@ -133,6 +136,7 @@ export function validateState(state) {
   for(const i of state.items) {
     if(typeof i.id!=='string'||ids.has(i.id)||typeof i.name!=='string'||!i.name.trim()||i.name.length>200||!CATEGORIES.includes(i.category)||!Array.isArray(i.tags)||!i.tags.every(t=>typeof t==='string')||!Array.isArray(i.modes)||!i.modes.every(m=>MODES.includes(m))||!PALETTE[i.color]||typeof i.subcategory!=='string'||!['base','outerwear','dress','leggings'].includes(i.role)||typeof i.pattern!=='string'||!Number.isFinite(i.formality)||i.formality<1||i.formality>5||!Number.isFinite(i.warmth)||i.warmth<0||i.warmth>2||typeof i.favorite!=='boolean'||typeof i.colorVerified!=='boolean'||!validSource(i.src))throw Error('A clothing item contains invalid fields.');
     if((i.role==='dress'||i.role==='outerwear')&&i.category!=='Top'||i.role==='leggings'&&i.category!=='Bottom')throw Error('A clothing layer is assigned to an incompatible category.');
+    if(i.availability!==undefined&&(typeof i.availability!=='string'||!Object.hasOwn(AVAILABILITY,i.availability)))throw Error('Invalid clothing availability.');
     if(i.secondaryColor!==undefined&&i.secondaryColor!==''&&(typeof i.secondaryColor!=='string'||!Object.hasOwn(PALETTE,i.secondaryColor)))throw Error('Invalid secondary clothing color.');
     if(i.adjustments)validateAdjustments(i.adjustments);
     if(i.notes!==undefined&&typeof i.notes!=='string'||i.stylistNotes!==undefined&&typeof i.stylistNotes!=='string')throw Error('Clothing notes must be text.');
@@ -144,6 +148,7 @@ export function validateState(state) {
   for(const look of state.looks) if(typeof look.id!=='string'||typeof look.name!=='string'||!MODES.includes(look.mode)||!Array.isArray(look.itemIds)||!look.itemIds.every(id=>ids.has(id)))throw Error('A saved look refers to an invalid item.');
   for(const cat of state.subcategories) if(!cat||!CATEGORIES.includes(cat.category)||typeof cat.path!=='string')throw Error('Invalid subcategory.');
   const p=state.profile;
+  if(p.neutralColors!==undefined&&(!Array.isArray(p.neutralColors)||p.neutralColors.length>Object.keys(PALETTE).length||new Set(p.neutralColors).size!==p.neutralColors.length||!p.neutralColors.every(c=>typeof c==='string'&&Object.hasOwn(PALETTE,c))))throw Error('Invalid neutral color selection.');
   if(p.ignoreNeutralColors!==undefined&&typeof p.ignoreNeutralColors!=='boolean')throw Error('Invalid neutral color preference.');
   if(p.ignoreSockPatterns!==undefined&&typeof p.ignoreSockPatterns!=='boolean')throw Error('Invalid sock pattern preference.');
   if(typeof p.name!=='string'||!['balanced','tonal','expressive'].includes(p.palette)||!['either','dress','separates'].includes(p.silhouette)||!Array.isArray(p.preferredTags)||!Array.isArray(p.avoidTags)||![...p.preferredTags,...p.avoidTags].every(t=>typeof t==='string')||typeof p.notes!=='string'||!Number.isFinite(p.favoriteBias)||p.favoriteBias<0||p.favoriteBias>10||!Number.isFinite(p.adventure)||p.adventure<0||p.adventure>10||!Number.isFinite(p.warmth)||p.warmth<0||p.warmth>2)throw Error('Invalid stylist preferences.');
