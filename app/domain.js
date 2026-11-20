@@ -15,7 +15,7 @@ export const DEFAULT_RULES = {
   Business: { minFormality:2, maxFormality:3, maxPatterns:1, maxColors:3, requireSocks:true, includeLayer:true, includeAccessory:true, note:'Business casual by default. A sport coat with separate trousers is not automatically a matching business suit.' },
   'Red carpet': { minFormality:4, maxFormality:5, maxPatterns:1, maxColors:2, requireSocks:false, includeLayer:false, includeAccessory:true, note:'Formal eveningwear. Confirm the invitation: a generated combination does not certify black-tie or any event’s dress code.' }
 };
-export const DEFAULT_PROFILE = { name:'My personal stylist', palette:'balanced', favoriteBias:4, adventure:3, warmth:1, silhouette:'either', preferredTags:[], avoidTags:[], notes:'' };
+export const DEFAULT_PROFILE = { name:'My personal stylist', palette:'balanced', favoriteBias:4, adventure:3, warmth:1, silhouette:'either', preferredTags:[], avoidTags:[], ignoreSockPatterns:false, notes:'' };
 export const DEFAULT_ADJUSTMENTS = { exposure:0, contrast:0, saturation:0, temperature:0, tint:0, rotation:0, crop:null };
 export const ACCESSORY_LABELS = Object.freeze({tie:'Tie',belt:'Belt',glasses:'Glasses',earrings:'Earrings',necklace:'Necklace',brooch:'Brooch',watch:'Watch',wristband:'Wristband',ring:'Ring',other:'Accessory'});
 const accessoryMatchers = [
@@ -54,6 +54,8 @@ export function validateLocks(items, avoidTags=[]) {
   return [...new Set(errors)];
 }
 const neutral = new Set(['Black','White','Gray','Light gray','Navy','Brown','Tan']);
+export const itemColors=item=>[...new Set([item.color,item.secondaryColor].filter(Boolean))];
+const countsTowardPatternLimit=(item,profile)=>item.pattern!=='Solid'&&!(profile.ignoreSockPatterns===true&&item.category==='Socks');
 export function assessOutfit(items, mode, rules, profile) {
   const warnings=[]; const slots=items.map(slotFor); const missing=[];
   if(!slots.includes('dress')) {
@@ -66,9 +68,9 @@ export function assessOutfit(items, mode, rules, profile) {
     if(!item.modes.includes(mode)) warnings.push(`${item.name} is not marked for ${mode.toLowerCase()} looks.`);
     if(item.formality<rules.minFormality||item.formality>rules.maxFormality) warnings.push(`${item.name} is outside this mode’s preferred formality range.`);
   }
-  const patterns=items.filter(i=>i.pattern!=='Solid').length;
+  const patterns=items.filter(i=>countsTowardPatternLimit(i,profile)).length;
   if(patterns>rules.maxPatterns) warnings.push(`${patterns} patterned pieces exceeds your preference of ${rules.maxPatterns}.`);
-  const colors=[...new Set(items.map(i=>i.color))];
+  const colors=[...new Set(items.flatMap(itemColors))];
   if(colors.length>rules.maxColors) warnings.push(`${colors.length} color families exceeds your preference of ${rules.maxColors}.`);
   if(items.some(i=>!i.colorVerified)) warnings.push('Some color labels are provisional. Check them in daylight or in the photo studio.');
   if(mode==='Red carpet') warnings.push('Check the event invitation. Eveningwear and black-tie requirements vary.');
@@ -78,6 +80,7 @@ export function assessOutfit(items, mode, rules, profile) {
   const reasons=[];
   if(items.some(i=>i.favorite)) reasons.push('Includes pieces you have favorited.');
   if(patterns<=rules.maxPatterns) reasons.push(`Keeps pattern mixing within your ${rules.maxPatterns}-piece preference.`);
+  if(profile.ignoreSockPatterns===true&&items.some(i=>i.category==='Socks'&&i.pattern!=='Solid')) reasons.push('Sock patterns are excluded from your pattern limit. Their colors still count.');
   if(colors.length&&colors.length<=rules.maxColors) reasons.push(`Builds around ${colors.join(', ').toLowerCase()} within your color limit.`);
   if(items.some(i=>i.tags.some(t=>profile.preferredTags.includes(t)))) reasons.push('Brings in your preferred style tags.');
   if(slots.includes('dress')) reasons.push('One dress covers both Top and Bottom; layers stay optional.');
@@ -97,12 +100,12 @@ export function generateOutfit(allItems, mode, rules, profile, lockedIds=[], see
     const matches=i=>slotFor(i)===slot&&(type===null||accessoryType(i)===type);
     if(selected.some(matches))return;
     const options=eligible.filter(i=>matches(i)&&!selected.some(s=>s.id===i.id));
-    const colors=selected.map(i=>i.color); const patterns=selected.filter(i=>i.pattern!=='Solid').length;
-    const rank=i=> (i.favorite?profile.favoriteBias:0)+i.tags.filter(t=>profile.preferredTags.includes(t)).length*3
-      +(profile.palette==='tonal'?(colors.includes(i.color)?6:0):profile.palette==='balanced'?(neutral.has(i.color)?2:0):(!colors.includes(i.color)?3:0))
-      -(i.pattern!=='Solid'&&patterns>=rules.maxPatterns?12:0)
-      -(!colors.includes(i.color)&&new Set(colors).size>=rules.maxColors?8:0)
-      -Math.abs((i.warmth??1)-profile.warmth)*2+random()*(2+profile.adventure*2);
+    const colors=new Set(selected.flatMap(itemColors)); const patterns=selected.filter(i=>countsTowardPatternLimit(i,profile)).length;
+    const rank=i=>{const pieceColors=itemColors(i),newColors=pieceColors.filter(c=>!colors.has(c)).length;return (i.favorite?profile.favoriteBias:0)+i.tags.filter(t=>profile.preferredTags.includes(t)).length*3
+      +(profile.palette==='tonal'?6*(pieceColors.length-newColors)/pieceColors.length:profile.palette==='balanced'?(pieceColors.every(c=>neutral.has(c))?2:0):3*newColors/pieceColors.length)
+      -(countsTowardPatternLimit(i,profile)&&patterns>=rules.maxPatterns?12:0)
+      -(newColors>0&&colors.size+newColors>rules.maxColors?8:0)
+      -Math.abs((i.warmth??1)-profile.warmth)*2+random()*(2+profile.adventure*2);};
     const scored=options.map(item=>({item,score:rank(item)})).sort((a,b)=>b.score-a.score);
     if(scored[0])selected.push(scored[0].item);
   }
@@ -125,6 +128,7 @@ export function validateState(state) {
   for(const i of state.items) {
     if(typeof i.id!=='string'||ids.has(i.id)||typeof i.name!=='string'||!i.name.trim()||i.name.length>200||!CATEGORIES.includes(i.category)||!Array.isArray(i.tags)||!i.tags.every(t=>typeof t==='string')||!Array.isArray(i.modes)||!i.modes.every(m=>MODES.includes(m))||!PALETTE[i.color]||typeof i.subcategory!=='string'||!['base','outerwear','dress','leggings'].includes(i.role)||typeof i.pattern!=='string'||!Number.isFinite(i.formality)||i.formality<1||i.formality>5||!Number.isFinite(i.warmth)||i.warmth<0||i.warmth>2||typeof i.favorite!=='boolean'||typeof i.colorVerified!=='boolean'||!validSource(i.src))throw Error('A clothing item contains invalid fields.');
     if((i.role==='dress'||i.role==='outerwear')&&i.category!=='Top'||i.role==='leggings'&&i.category!=='Bottom')throw Error('A clothing layer is assigned to an incompatible category.');
+    if(i.secondaryColor!==undefined&&i.secondaryColor!==''&&(typeof i.secondaryColor!=='string'||!Object.hasOwn(PALETTE,i.secondaryColor)))throw Error('Invalid secondary clothing color.');
     if(i.adjustments)validateAdjustments(i.adjustments);
     if(i.notes!==undefined&&typeof i.notes!=='string'||i.stylistNotes!==undefined&&typeof i.stylistNotes!=='string')throw Error('Clothing notes must be text.');
     if(i.description!==undefined&&(typeof i.description!=='string'||i.description.length>2000))throw Error('Clothing descriptions must be text under 2,000 characters.');
@@ -135,6 +139,7 @@ export function validateState(state) {
   for(const look of state.looks) if(typeof look.id!=='string'||typeof look.name!=='string'||!MODES.includes(look.mode)||!Array.isArray(look.itemIds)||!look.itemIds.every(id=>ids.has(id)))throw Error('A saved look refers to an invalid item.');
   for(const cat of state.subcategories) if(!cat||!CATEGORIES.includes(cat.category)||typeof cat.path!=='string')throw Error('Invalid subcategory.');
   const p=state.profile;
+  if(p.ignoreSockPatterns!==undefined&&typeof p.ignoreSockPatterns!=='boolean')throw Error('Invalid sock pattern preference.');
   if(typeof p.name!=='string'||!['balanced','tonal','expressive'].includes(p.palette)||!['either','dress','separates'].includes(p.silhouette)||!Array.isArray(p.preferredTags)||!Array.isArray(p.avoidTags)||![...p.preferredTags,...p.avoidTags].every(t=>typeof t==='string')||typeof p.notes!=='string'||!Number.isFinite(p.favoriteBias)||p.favoriteBias<0||p.favoriteBias>10||!Number.isFinite(p.adventure)||p.adventure<0||p.adventure>10||!Number.isFinite(p.warmth)||p.warmth<0||p.warmth>2)throw Error('Invalid stylist preferences.');
   for(const mode of MODES){const r=state.rules[mode]; if(!r||![r.minFormality,r.maxFormality,r.maxPatterns,r.maxColors].every(Number.isInteger)||r.minFormality<1||r.maxFormality>5||r.minFormality>r.maxFormality||r.maxPatterns<0||r.maxPatterns>8||r.maxColors<1||r.maxColors>8||!['requireSocks','includeLayer','includeAccessory'].every(k=>typeof r[k]==='boolean')||typeof r.note!=='string')throw Error('Invalid style guidelines.');}
   if(state.reference&&!validSource(state.reference))throw Error('Invalid background reference.');

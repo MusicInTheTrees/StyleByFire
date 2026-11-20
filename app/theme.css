@@ -49,3 +49,4 @@ dialog{border-color:#c4d1e2;box-shadow:0 25px 90px #17345933}.detail-photo>img,.
  .designer-page .picker-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.designer-page .picker-grid .item-card{max-width:none}.category-tab{font-size:13px}.filterbar select,.search-field input{font-size:14px!important}.wardrobe-banner p,.banner-cta{font-size:14px}.collection-note{font-size:13px}
  .auth-page{display:flex;flex-direction:column;gap:28px;padding:28px 20px 45px;align-items:stretch}.auth-intro .brand{margin-bottom:30px}.auth-intro h1{font-size:42px}.auth-intro>p:not(.eyebrow){font-size:16px;margin-top:18px}.auth-palette{margin:20px 0 12px}.auth-card{padding:24px 20px}.auth-card h2{font-size:30px}
 }
+.piece-colors{display:flex;flex-wrap:wrap;gap:4px 8px}.piece-color{display:inline-flex;align-items:center;gap:5px}.item-info>div{flex-wrap:wrap}.outfit-piece-meta>.piece-colors{min-width:0}

@@ -14,7 +14,7 @@ let seed;try{seed=JSON.parse(await readFile(path.join(root,'seed.json'),'utf8'))
 const accounts=new LocalAccounts({data,root,seed});await accounts.initialize();
 const port=Number(process.env.PORT||4173);
 const mime={'.html':'text/html; charset=utf-8','.js':'text/javascript; charset=utf-8','.css':'text/css; charset=utf-8','.svg':'image/svg+xml','.jpg':'image/jpeg','.png':'image/png','.webp':'image/webp','.json':'application/json','.ico':'image/x-icon'};
-const publicAmbientImages=new Set(['/ambient-diamond.png','/ambient-geometric.png','/ambient-lattice.png','/ambient-dots.png']);
+const publicAmbientImages=new Set(['/ambient-diamond.png','/ambient-geometric.png','/ambient-lattice.png','/ambient-dots.png','/sidebar-pinstripe.png']);
 function send(res,status,value,type='application/json'){res.writeHead(status,{'Content-Type':type,'Cache-Control':'no-store','X-Content-Type-Options':'nosniff'});res.end(type==='application/json'?JSON.stringify(value):value);}
 async function body(req,max){const chunks=[];let total=0;for await(const chunk of req){total+=chunk.length;if(total>max)throw Object.assign(Error('The request is too large.'),{status:413});chunks.push(chunk);}return Buffer.concat(chunks);}
 const jsonBody=async req=>JSON.parse((await body(req,16*1024)).toString());

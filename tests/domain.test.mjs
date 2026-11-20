@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {CATEGORIES,DEFAULT_RULES,DEFAULT_PROFILE,DEFAULT_ADJUSTMENTS,DEFAULT_SUBCATEGORIES,ACCESSORY_LABELS,accessoryType,generateOutfit,validateLocks,validateState,slotFor} from '../app/domain.js';
+import {CATEGORIES,DEFAULT_RULES,DEFAULT_PROFILE,DEFAULT_ADJUSTMENTS,DEFAULT_SUBCATEGORIES,ACCESSORY_LABELS,accessoryType,itemColors,assessOutfit,generateOutfit,validateLocks,validateState,slotFor} from '../app/domain.js';
 const profile=structuredClone(DEFAULT_PROFILE);
 const make=(id,category,extra={})=>({id,name:id,category,role:'base',color:'Black',colorVerified:true,pattern:'Solid',formality:2,warmth:1,tags:[],modes:['Casual','Business'],favorite:false,subcategory:'',src:'/media/seed-test.jpg',adjustments:structuredClone(DEFAULT_ADJUSTMENTS),...extra});
 const base=()=>[make('shirt','Top'),make('pants','Bottom'),make('shoes','Shoes')];
@@ -77,6 +77,79 @@ test('accessory colors and patterns still count toward transparent styling warni
   assert.equal(result.items.filter(i=>i.category==='Accessories').length,2);
   assert.ok(result.warnings.some(w=>w.includes('3 color families')));
   assert.ok(result.warnings.some(w=>w.includes('2 patterned pieces')));
+});
+
+test('ignoring sock patterns removes only their pattern warning contribution, retaining color and accessory checks',()=>{
+  const items=[...base(),make('patterned-socks','Socks',{pattern:'Argyle',color:'Blue'})];
+  items[0].pattern='Geometric';
+  const rules={...DEFAULT_RULES.Business,maxColors:1};
+  const counted=assessOutfit(items,'Business',rules,profile);
+  const ignored=assessOutfit(items,'Business',rules,{...profile,ignoreSockPatterns:true});
+  assert.ok(counted.warnings.some(w=>w.includes('2 patterned pieces')));
+  assert.ok(!ignored.warnings.some(w=>w.includes('patterned pieces')));
+  assert.ok(ignored.reasons.some(r=>r.includes('Sock patterns are excluded')));
+  assert.ok(ignored.warnings.some(w=>w.includes('2 color families')));
+  assert.equal(items.at(-1).pattern,'Argyle');
+  const withTie=assessOutfit([...items,make('patterned-tie','Accessories',{subcategory:'Ties',pattern:'Stripes'})],'Business',rules,{...profile,ignoreSockPatterns:true});
+  assert.ok(withTie.warnings.some(w=>w.includes('2 patterned pieces')));
+});
+
+test('sock pattern preference changes recommendations for both candidate socks and patterns already pinned',()=>{
+  const rules={...DEFAULT_RULES.Business,includeLayer:false,includeAccessory:false};
+  const p={...profile,adventure:0};
+  const items=[...base(),make('plain-socks','Socks'),make('favorite-patterned-socks','Socks',{pattern:'Argyle',favorite:true})];
+  items[0].pattern='Geometric';
+  const counted=generateOutfit(items,'Business',rules,p,['shirt'],42);
+  const ignored=generateOutfit(items,'Business',rules,{...p,ignoreSockPatterns:true},['shirt'],42);
+  assert.ok(counted.items.some(i=>i.id==='plain-socks'));
+  assert.ok(ignored.items.some(i=>i.id==='favorite-patterned-socks'));
+  const pinnedSocks=[...base(),make('favorite-patterned-shirt','Top',{pattern:'Geometric',favorite:true}),make('patterned-socks','Socks',{pattern:'Argyle'})];
+  const countedPinned=generateOutfit(pinnedSocks,'Business',rules,p,['patterned-socks'],42);
+  const ignoredPinned=generateOutfit(pinnedSocks,'Business',rules,{...p,ignoreSockPatterns:true},['patterned-socks'],42);
+  assert.ok(countedPinned.items.some(i=>i.id==='shirt'));
+  assert.ok(ignoredPinned.items.some(i=>i.id==='favorite-patterned-shirt'));
+});
+
+test('sock pattern preference accepts existing wardrobes and rejects non-boolean restores',()=>{
+  assert.equal(DEFAULT_PROFILE.ignoreSockPatterns,false);
+  const state={version:1,items:base(),looks:[],subcategories:[],profile:structuredClone(profile),rules:structuredClone(DEFAULT_RULES)};
+  delete state.profile.ignoreSockPatterns;
+  assert.equal(validateState(state),state);
+  for(const value of [false,true]){state.profile.ignoreSockPatterns=value;assert.equal(validateState(state),state);}
+  for(const value of ['false',1,null]){state.profile.ignoreSockPatterns=value;assert.throws(()=>validateState(state),/sock pattern preference/);}
+});
+
+test('a white and black geometric shirt contributes two colors but only one pattern',()=>{
+  const items=base();items[0]={...items[0],color:'White',secondaryColor:'Black',pattern:'Geometric'};
+  const result=assessOutfit(items,'Casual',{...DEFAULT_RULES.Casual,maxColors:1,maxPatterns:1},profile);
+  assert.ok(result.warnings.some(w=>w.includes('2 color families')));
+  assert.ok(!result.warnings.some(w=>w.includes('patterned pieces')));
+  assert.deepEqual(itemColors(items[0]),['White','Black']);
+  assert.deepEqual(itemColors({...items[0],secondaryColor:'White'}),['White']);
+  assert.deepEqual(itemColors({...items[0],secondaryColor:''}),['White']);
+});
+
+test('balanced styling treats white and black as neutral while considering bold secondary colors',()=>{
+  const items=[make('white-red-shirt','Top',{color:'White',secondaryColor:'Red'}),make('white-black-shirt','Top',{color:'White',secondaryColor:'Black',pattern:'Geometric'}),make('pants','Bottom'),make('shoes','Shoes')];
+  const result=generateOutfit(items,'Casual',DEFAULT_RULES.Casual,{...profile,adventure:0},[],42);
+  assert.ok(result.items.some(i=>i.id==='white-black-shirt'));
+});
+
+test('secondary colors affect tonal and expressive choices and can exceed the color limit in one piece',()=>{
+  const items=[make('black-red-shirt','Top',{color:'Black',secondaryColor:'Red'}),make('black-white-shirt','Top',{color:'Black',secondaryColor:'White'}),make('pants','Bottom',{color:'White'}),make('shoes','Shoes')];
+  for(const [palette,expected] of [['tonal','black-white-shirt'],['expressive','black-red-shirt']]){
+    const result=generateOutfit(items,'Casual',DEFAULT_RULES.Casual,{...profile,palette,adventure:0},['pants','shoes'],42);
+    assert.ok(result.items.some(i=>i.id===expected));
+  }
+  const limitItems=[make('favorite-two-new-colors','Top',{color:'White',secondaryColor:'Blue',favorite:true}),make('one-new-color','Top',{color:'White'}),make('pants','Bottom'),make('shoes','Shoes')];
+  const limited=generateOutfit(limitItems,'Casual',{...DEFAULT_RULES.Casual,maxColors:2},{...profile,adventure:0},['pants'],42);
+  assert.ok(limited.items.some(i=>i.id==='one-new-color'));
+});
+
+test('secondary colors are optional and only accept palette entries in restored wardrobes',()=>{
+  const state={version:1,items:base(),looks:[],subcategories:[],profile:structuredClone(profile),rules:structuredClone(DEFAULT_RULES)};
+  for(const value of [undefined,'','Black','White']){state.items[0].secondaryColor=value;assert.equal(validateState(state),state);}
+  for(const value of ['chartreuse','toString','__proto__',null,42]){state.items[0].secondaryColor=value;assert.throws(()=>validateState(state),/secondary clothing color/);}
 });
 test('exclusion tags are case-insensitive and apply to locked garments',()=>{const items=base();items[0].tags=['ITCHY'];assert.ok(run(items,['shirt'],{avoidTags:['itchy']}).errors.length);assert.ok(run(items,[],{avoidTags:['itchy']}).missing.includes('Top'));});
 test('preference range filters unpinned garments',()=>{const items=base();items[0].formality=5;assert.ok(run(items).missing.includes('Top'));});
