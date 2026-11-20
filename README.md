@@ -30,7 +30,8 @@ The sign-in and registration forms support browser password managers, so you can
 
 ## Build a look
 
-- **Outfit designer:** choose Casual, Sport, Golf, Business, or Red carpet. The selected outfit is the primary workspace, with large piece previews above the clothing picker. A blue-and-gray interface keeps attention on your clothing's actual colors.
+- **Outfit designer:** choose Casual, Sport, Golf, Business, or Red carpet. The selected outfit is the primary workspace, with a large mannequin preview first and individual pieces above the clothing picker. A blue-and-gray interface keeps attention on your clothing's actual colors.
+- **Build manually:** choose **Choose pieces** in Outfit designer, or select **Choose every piece** in the builder underneath the outfit. Click a photo to add or remove it immediately. Clothing replaces its occupied slot; a dress replaces the separate top and bottom while keeping leggings and outerwear. Accessories can be combined. Search by name, color, tag, or subcategory, start empty, or explicitly ask for suggestions to fill remaining slots. Manual choices still receive color stories and style notes. The current outfit is remembered in this browser separately for each account; save it to the lookbook for a named combination.
 - **Pin required pieces:** create or remix around the items you want to wear. Conflicting pins and missing essentials are explained. New pins leave the current outfit visible until you remix it.
 - **Combine accessories:** ties, belts, eyewear, earrings, necklaces, brooches, watches, wristbands, rings, wallets, and scarves can appear together. Automatic selection chooses eligible pieces across accessory types instead of stopping after one accessory. Ties include neckties, bow ties, and ascots; automatic selection avoids adding several ties at once. Common labels such as eye wear, earing, wrist bands, and scarfs are recognized. Pin multiple accessories when you want a specific combination.
 - **See the reasoning:** the color story shows the outfit's color families. Stylist notes explain the choices and flag tradeoffs such as extra patterns, colors, or pieces outside a mode's guidelines.
@@ -51,7 +52,7 @@ The playbook includes classic, tonal and patterned outfit ideas, plus source lin
 
 ## Preview on a mannequin
 
-In Outfit designer, choose **Preview on mannequin**. Pick a straight, broad, or curved mannequin and prepare the current outfit. The large preview sits beside a list of every selected piece, including layers and accessories. Preview history belongs to the signed-in account; opening an older preview shows its original outfit snapshot rather than silently substituting today's clothes.
+Outfit designer puts the saved mannequin image first, with the selected clothing and accessories underneath. The image appears only when it matches the current pieces, occasion, photo edits, and saved color corrections. A changed selection shows a new-preview prompt instead of an outdated image. Use **Create mannequin preview** or **Preview options** to pick a straight, broad, or curved mannequin and prepare the current outfit; **Refresh preview** checks for an image saved by Codex. When no working outfit is remembered in this browser, the latest completed preview supplies the starting selection. Preview history belongs to the signed-in account; opening an older preview shows its original outfit snapshot rather than silently substituting today's clothes.
 
 Three generation routes are available:
 

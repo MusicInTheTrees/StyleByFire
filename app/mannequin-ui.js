@@ -21,10 +21,11 @@ export function closeMannequin(){
  active=null;
 }
 
-export async function openMannequin({state,itemIds,mode,api,openModal,modalHead,photo,escape,accountId}){
+export async function openMannequin({state,itemIds,mode,api,openModal,modalHead,photo,escape,accountId,savedPreview=null}){
  closeMannequin();
- const initialSpec=buildPreviewSpec(state,itemIds,{mode});
- const s={state,itemIds:[...itemIds],mode,api,openModal,modalHead,photo,escape,accountId,initialSpec,bodyShape:'straight',provider:'assisted',providers:fallbackProviders,history:[],selected:null,viewingHistory:false,loading:true,busy:false,error:'',message:'Loading your mannequin studio…',controller:new AbortController(),epoch};
+ const bodyShape=savedPreview?.bodyShape||'straight';
+ const initialSpec=buildPreviewSpec(state,itemIds,{mode,bodyShape});
+ const s={state,itemIds:[...itemIds],mode,api,openModal,modalHead,photo,escape,accountId,initialSpec,bodyShape,provider:'assisted',providers:fallbackProviders,history:[],selected:null,viewingHistory:false,loading:true,busy:false,error:'',message:'Loading your mannequin studio…',controller:new AbortController(),epoch};
  active=s;
  render(s);
  s.dialog=document.querySelector('#modal');
@@ -70,7 +71,7 @@ export async function openMannequin({state,itemIds,mode,api,openModal,modalHead,
  else warnings.push('Generation options could not be checked. The Codex handoff is still available.');
  if(results[1].status==='fulfilled')s.history=results[1].value.previews||[];
  else warnings.push('Saved previews could not be loaded.');
- const candidate=s.history.find(p=>p.mode===mode&&p.bodyShape===s.bodyShape&&sameIds(p.itemIds||[],s.itemIds));
+ const candidate=s.history.find(p=>p.id===savedPreview?.id)||s.history.find(p=>p.mode===mode&&p.bodyShape===s.bodyShape&&sameIds(p.itemIds||[],s.itemIds));
  if(candidate){
   try{
    const detail=await request(s,`/api/mannequin/${candidate.id}`);
