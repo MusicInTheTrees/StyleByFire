@@ -156,3 +156,36 @@ test('preference range filters unpinned garments',()=>{const items=base();items[
 test('required socks affect completeness',()=>{const result=generateOutfit(base(),'Business',DEFAULT_RULES.Business,profile,[],1);assert.deepEqual(result.missing,['Socks']);});
 test('fixed seed yields reproducible explanations and choices',()=>{assert.deepEqual(run(seed.items),run(seed.items));});
 test('wardrobe validator rejects malformed restores before persistence',()=>{const valid={version:1,items:seed.items,looks:[],subcategories:[],reference:seed.reference,profile,rules:DEFAULT_RULES};assert.equal(validateState(valid),valid);for(const patch of [{category:'Dress'},{src:'/media/../../server.mjs'},{src:'https://external.example/photo.jpg'},{role:'dress',category:'Bottom'},{modes:['anything']},{adjustments:{...DEFAULT_ADJUSTMENTS,crop:{x:.8,y:0,w:.5,h:1}}}]){const state=structuredClone(valid);Object.assign(state.items[0],patch);assert.throws(()=>validateState(state));}const stale=structuredClone(valid);stale.looks=[{id:'a',name:'Invalid',mode:'Casual',itemIds:['missing']}];assert.throws(()=>validateState(stale));});
+
+
+test('neutral exclusion counts only distinct accent colors including secondary colors',()=>{
+  const items=['White','Black','Gray','Light gray','Brown','Tan','Navy','Blue'].map((color,n)=>make('color-'+n,'Top',{color}));
+  items[0].secondaryColor='Blue';
+  const rules={...DEFAULT_RULES.Casual,maxColors:1};
+  assert.ok(assessOutfit(items,'Casual',rules,profile).warnings.some(w=>w.includes('8 color families')));
+  const p={...profile,ignoreNeutralColors:true};
+  const result=assessOutfit(items,'Casual',rules,p);
+  assert.ok(!result.warnings.some(w=>w.includes('color families')));
+  assert.ok(result.reasons.some(r=>r.includes('1 of your 1 color allowance')));
+  items[1].secondaryColor='Red';
+  assert.ok(assessOutfit(items,'Casual',rules,p).warnings.some(w=>w.includes('2 non-neutral color families')));
+  const onlyNeutrals=assessOutfit(base(),'Casual',rules,p);
+  assert.ok(onlyNeutrals.reasons.some(r=>r.includes('0 of your 1 color allowance')));
+});
+
+test('neutral exclusion changes color-limit ranking but still penalizes extra accents',()=>{
+  const rules={...DEFAULT_RULES.Casual,maxColors:1,includeAccessory:false};
+  const p={...profile,adventure:0};
+  const items=[make('matching','Top',{color:'Blue'}),make('favorite-neutral','Top',{color:'White',secondaryColor:'Black',favorite:true}),make('pants','Bottom',{color:'Blue'}),make('shoes','Shoes',{color:'Blue'})];
+  assert.ok(generateOutfit(items,'Casual',rules,p,['pants','shoes'],42).items.some(i=>i.id==='matching'));
+  assert.ok(generateOutfit(items,'Casual',rules,{...p,ignoreNeutralColors:true},['pants','shoes'],42).items.some(i=>i.id==='favorite-neutral'));
+  items[1].secondaryColor='Red';
+  assert.ok(generateOutfit(items,'Casual',rules,{...p,ignoreNeutralColors:true},['pants','shoes'],42).items.some(i=>i.id==='matching'));
+});
+
+test('neutral exclusion remains optional and validates restored preferences',()=>{
+  assert.equal(DEFAULT_PROFILE.ignoreNeutralColors,false);
+  const state={version:1,items:base(),looks:[],subcategories:[],profile:structuredClone(profile),rules:structuredClone(DEFAULT_RULES)};
+  for(const value of [undefined,false,true]){state.profile.ignoreNeutralColors=value;assert.equal(validateState(state),state);}
+  for(const value of ['true',1,null]){state.profile.ignoreNeutralColors=value;assert.throws(()=>validateState(state),/neutral color preference/);}
+});

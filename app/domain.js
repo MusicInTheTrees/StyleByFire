@@ -15,7 +15,7 @@ export const DEFAULT_RULES = {
   Business: { minFormality:2, maxFormality:3, maxPatterns:1, maxColors:3, requireSocks:true, includeLayer:true, includeAccessory:true, note:'Business casual by default. A sport coat with separate trousers is not automatically a matching business suit.' },
   'Red carpet': { minFormality:4, maxFormality:5, maxPatterns:1, maxColors:2, requireSocks:false, includeLayer:false, includeAccessory:true, note:'Formal eveningwear. Confirm the invitation: a generated combination does not certify black-tie or any event’s dress code.' }
 };
-export const DEFAULT_PROFILE = { name:'My personal stylist', palette:'balanced', favoriteBias:4, adventure:3, warmth:1, silhouette:'either', preferredTags:[], avoidTags:[], ignoreSockPatterns:false, notes:'' };
+export const DEFAULT_PROFILE = { name:'My personal stylist', palette:'balanced', favoriteBias:4, adventure:3, warmth:1, silhouette:'either', preferredTags:[], avoidTags:[], ignoreSockPatterns:false, ignoreNeutralColors:false, notes:'' };
 export const DEFAULT_ADJUSTMENTS = { exposure:0, contrast:0, saturation:0, temperature:0, tint:0, rotation:0, crop:null };
 export const ACCESSORY_LABELS = Object.freeze({tie:'Tie',belt:'Belt',glasses:'Glasses',earrings:'Earrings',necklace:'Necklace',brooch:'Brooch',watch:'Watch',wristband:'Wristband',ring:'Ring',other:'Accessory'});
 const accessoryMatchers = [
@@ -53,7 +53,9 @@ export function validateLocks(items, avoidTags=[]) {
   if(slots.includes('dress')&&(slots.includes('top')||slots.includes('bottom'))) errors.push('A dress occupies Top and Bottom. Unpin the separate top or bottom; leggings can still be layered.');
   return [...new Set(errors)];
 }
-const neutral = new Set(['Black','White','Gray','Light gray','Navy','Brown','Tan']);
+export const NEUTRAL_COLORS = Object.freeze(['Black','White','Gray','Light gray','Navy','Brown','Tan']);
+const neutral = new Set(NEUTRAL_COLORS);
+const countedColors=(colors,profile)=>colors.filter(c=>!(profile.ignoreNeutralColors===true&&neutral.has(c)));
 export const itemColors=item=>[...new Set([item.color,item.secondaryColor].filter(Boolean))];
 const countsTowardPatternLimit=(item,profile)=>item.pattern!=='Solid'&&!(profile.ignoreSockPatterns===true&&item.category==='Socks');
 export function assessOutfit(items, mode, rules, profile) {
@@ -71,7 +73,8 @@ export function assessOutfit(items, mode, rules, profile) {
   const patterns=items.filter(i=>countsTowardPatternLimit(i,profile)).length;
   if(patterns>rules.maxPatterns) warnings.push(`${patterns} patterned pieces exceeds your preference of ${rules.maxPatterns}.`);
   const colors=[...new Set(items.flatMap(itemColors))];
-  if(colors.length>rules.maxColors) warnings.push(`${colors.length} color families exceeds your preference of ${rules.maxColors}.`);
+  const limitedColors=countedColors(colors,profile);
+  if(limitedColors.length>rules.maxColors) warnings.push(`${limitedColors.length} ${profile.ignoreNeutralColors?'non-neutral ':''}color families exceed your preference of ${rules.maxColors}.`);
   if(items.some(i=>!i.colorVerified)) warnings.push('Some color labels are provisional. Check them in daylight or in the photo studio.');
   if(mode==='Red carpet') warnings.push('Check the event invitation. Eveningwear and black-tie requirements vary.');
   for(const type of ['tie','belt','glasses','watch']) {
@@ -80,8 +83,9 @@ export function assessOutfit(items, mode, rules, profile) {
   const reasons=[];
   if(items.some(i=>i.favorite)) reasons.push('Includes pieces you have favorited.');
   if(patterns<=rules.maxPatterns) reasons.push(`Keeps pattern mixing within your ${rules.maxPatterns}-piece preference.`);
-  if(profile.ignoreSockPatterns===true&&items.some(i=>i.category==='Socks'&&i.pattern!=='Solid')) reasons.push('Sock patterns are excluded from your pattern limit. Their colors still count.');
-  if(colors.length&&colors.length<=rules.maxColors) reasons.push(`Builds around ${colors.join(', ').toLowerCase()} within your color limit.`);
+  if(profile.ignoreSockPatterns===true&&items.some(i=>i.category==='Socks'&&i.pattern!=='Solid')) reasons.push(profile.ignoreNeutralColors?'Sock patterns are excluded from your pattern limit. Sock colors follow your color-limit preference.':'Sock patterns are excluded from your pattern limit. Their colors still count.');
+  if(profile.ignoreNeutralColors&&colors.some(c=>neutral.has(c))) reasons.push(`Neutral colors are excluded: ${limitedColors.length} of your ${rules.maxColors} color allowance used. All colors remain in the color story.`);
+  if(limitedColors.length&&limitedColors.length<=rules.maxColors) reasons.push(`Builds around ${limitedColors.join(', ').toLowerCase()} within your color limit.`);
   if(items.some(i=>i.tags.some(t=>profile.preferredTags.includes(t)))) reasons.push('Brings in your preferred style tags.');
   if(slots.includes('dress')) reasons.push('One dress covers both Top and Bottom; layers stay optional.');
   const accessories=items.filter(i=>i.category==='Accessories');
@@ -101,10 +105,11 @@ export function generateOutfit(allItems, mode, rules, profile, lockedIds=[], see
     if(selected.some(matches))return;
     const options=eligible.filter(i=>matches(i)&&!selected.some(s=>s.id===i.id));
     const colors=new Set(selected.flatMap(itemColors)); const patterns=selected.filter(i=>countsTowardPatternLimit(i,profile)).length;
-    const rank=i=>{const pieceColors=itemColors(i),newColors=pieceColors.filter(c=>!colors.has(c)).length;return (i.favorite?profile.favoriteBias:0)+i.tags.filter(t=>profile.preferredTags.includes(t)).length*3
+    const limitColors=countedColors([...colors],profile);
+    const rank=i=>{const pieceColors=itemColors(i),newColors=pieceColors.filter(c=>!colors.has(c)).length,newCountedColors=countedColors(pieceColors,profile).filter(c=>!colors.has(c)).length;return (i.favorite?profile.favoriteBias:0)+i.tags.filter(t=>profile.preferredTags.includes(t)).length*3
       +(profile.palette==='tonal'?6*(pieceColors.length-newColors)/pieceColors.length:profile.palette==='balanced'?(pieceColors.every(c=>neutral.has(c))?2:0):3*newColors/pieceColors.length)
       -(countsTowardPatternLimit(i,profile)&&patterns>=rules.maxPatterns?12:0)
-      -(newColors>0&&colors.size+newColors>rules.maxColors?8:0)
+      -(newCountedColors>0&&limitColors.length+newCountedColors>rules.maxColors?8:0)
       -Math.abs((i.warmth??1)-profile.warmth)*2+random()*(2+profile.adventure*2);};
     const scored=options.map(item=>({item,score:rank(item)})).sort((a,b)=>b.score-a.score);
     if(scored[0])selected.push(scored[0].item);
@@ -139,6 +144,7 @@ export function validateState(state) {
   for(const look of state.looks) if(typeof look.id!=='string'||typeof look.name!=='string'||!MODES.includes(look.mode)||!Array.isArray(look.itemIds)||!look.itemIds.every(id=>ids.has(id)))throw Error('A saved look refers to an invalid item.');
   for(const cat of state.subcategories) if(!cat||!CATEGORIES.includes(cat.category)||typeof cat.path!=='string')throw Error('Invalid subcategory.');
   const p=state.profile;
+  if(p.ignoreNeutralColors!==undefined&&typeof p.ignoreNeutralColors!=='boolean')throw Error('Invalid neutral color preference.');
   if(p.ignoreSockPatterns!==undefined&&typeof p.ignoreSockPatterns!=='boolean')throw Error('Invalid sock pattern preference.');
   if(typeof p.name!=='string'||!['balanced','tonal','expressive'].includes(p.palette)||!['either','dress','separates'].includes(p.silhouette)||!Array.isArray(p.preferredTags)||!Array.isArray(p.avoidTags)||![...p.preferredTags,...p.avoidTags].every(t=>typeof t==='string')||typeof p.notes!=='string'||!Number.isFinite(p.favoriteBias)||p.favoriteBias<0||p.favoriteBias>10||!Number.isFinite(p.adventure)||p.adventure<0||p.adventure>10||!Number.isFinite(p.warmth)||p.warmth<0||p.warmth>2)throw Error('Invalid stylist preferences.');
   for(const mode of MODES){const r=state.rules[mode]; if(!r||![r.minFormality,r.maxFormality,r.maxPatterns,r.maxColors].every(Number.isInteger)||r.minFormality<1||r.maxFormality>5||r.minFormality>r.maxFormality||r.maxPatterns<0||r.maxPatterns>8||r.maxColors<1||r.maxColors>8||!['requireSocks','includeLayer','includeAccessory'].every(k=>typeof r[k]==='boolean')||typeof r.note!=='string')throw Error('Invalid style guidelines.');}
