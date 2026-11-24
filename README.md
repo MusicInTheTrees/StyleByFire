@@ -34,6 +34,18 @@ After sign-in, an account banner offers **Preview category tree** until you inst
 
 This is an in-app category tree, saved separately for each account; it does not create, move, or rename folders on disk. Dresses stay within Top, leggings within Bottom, and all accessory types remain beneath Accessories. Installation/dismissal is saved with the wardrobe, including backups.
 
+## Plan a week
+
+Open **Weekly planner** to choose which days need an outfit and select a mode for each: Casual, Sport / athletic, Golf, Business, Red carpet, or Random. The starting schedule is Monday–Wednesday Business, Thursday Red carpet, Friday Random, with Saturday and Sunday off and preset to Sport if enabled. **Save settings** keeps your preferences; **Generate week** saves the preferences and replaces the current weekly plan.
+
+Enable reuse separately for caps, tops, outer layers, dresses, pants/slacks, other bottoms, leggings, socks, shoes, and accessories. The maximum is **total days per individual item within that plan**, from 1 to 7; unchecked means a single wear. Accessory limits apply separately to each tie, watch, wallet, necklace, and other piece. Pants are recognized from their subcategory (or name when uncategorized); shorts, skirts and skorts use Other bottoms. The fixed wardrobe categories stay the same.
+
+**Prefer consecutive days** groups compatible repeats. With five compatible days and enough suitable clothing, a two-day pants limit can produce three pairs: Monday/Tuesday, Wednesday/Thursday, and Friday. Different modes can require different pieces, and skipped calendar days do not count as consecutive. The planner searches alternative combinations, considers future days, and never exceeds reuse limits to fill a gap. Random tries shuffled modes and favors an outfit it can complete within those limits. A limited wardrobe may produce incomplete days; their cards explain the missing pieces and possible adjustments.
+
+Each day has clothing photos, every selected accessory, style notes, and **Open in outfit designer**. Opening a day copies its selection into the designer; changes made there do not rewrite the saved weekly plan. The rewear summary lists which days use each repeated piece. Your style playbook, color corrections, stylist exclusions, and clothing availability guide generation. The planner does not mark items worn, change laundry status, or generate AI images in bulk.
+
+Settings and the latest plan belong to the signed-in account, survive restarts, and are included in wardrobe backups. Changing settings keeps the previous plan visible with a reminder to regenerate. Removing a clothing item removes its references from the plan; current item warnings are reassessed when viewing it. Limits start fresh for each generated plan; this is a reusable Monday–Sunday planner, not a dated calendar or wear-history tracker.
+
 ## Build a look
 
 - **Outfit designer:** choose Casual, Sport, Golf, Business, or Red carpet. The selected outfit is the primary workspace, with a large mannequin preview first and individual pieces above the clothing picker. A blue-and-gray interface keeps attention on your clothing's actual colors.
@@ -130,7 +142,7 @@ npm test
 node --check app/app.js
 ```
 
-The automated tests cover outfit rules and accessory combinations, inventory refresh, custom neutral colors and bulk edits, account isolation, mannequin snapshots and provider contracts, website-import URL and DNS validation, redirect and response-size limits, product metadata, and real-photo demo upgrades and offline use. Provider tests mock image services; they do not require API spending or an installed local model. Integration tests use isolated temporary data directories rather than your saved wardrobe.
+The automated tests cover outfit rules and accessory combinations, weekly schedules and per-item reuse limits, consecutive repeats and clothing shortages, inventory refresh, custom neutral colors and bulk edits, account isolation, mannequin snapshots and provider contracts, website-import URL and DNS validation, redirect and response-size limits, product metadata, and real-photo demo upgrades and offline use. Provider tests mock image services; they do not require API spending or an installed local model. Integration tests use isolated temporary data directories rather than your saved wardrobe.
 
 - `PORT` changes the listening port.
 - `STYLEBYFIRE_DATA_DIR` selects a separate data directory for isolated QA.

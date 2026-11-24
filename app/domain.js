@@ -1,4 +1,5 @@
 import {DEFAULT_GOLF_RULES,golfCandidate,golfConflicts} from './golf.js';
+import {validateWeeklyPlanner} from './weekly-settings.js';
 export const CATEGORIES = Object.freeze(['Cap', 'Top', 'Bottom', 'Socks', 'Shoes', 'Accessories']);
 export const MODES = Object.freeze(['Casual', 'Sport', 'Golf', 'Business', 'Red carpet']);
 export const DEFAULT_SUBCATEGORIES = [
@@ -106,13 +107,16 @@ export function assessOutfit(items, mode, rules, profile) {
   if(accessories.length>1)reasons.push(`Combines ${accessories.length} accessories: ${[...new Set(accessories.map(i=>ACCESSORY_LABELS[accessoryType(i)].toLowerCase()))].join(', ')}.`);
   return {missing,warnings,reasons,complete:missing.length===0};
 }
-export function generateOutfit(allItems, mode, rules, profile, lockedIds=[], seed=1) {
+export function outfitCandidates(allItems,mode,rules,profile){
+  const excluded=profile.avoidTags.map(s=>s.toLowerCase());
+  return allItems.filter(i=>(!i.availability||i.availability==='ready')&&i.modes.includes(mode)&&i.formality>=rules.minFormality&&i.formality<=rules.maxFormality&&!i.tags.some(t=>excluded.includes(t.toLowerCase()))&&(mode!=='Golf'||golfConflicts(i,rules).length===0));
+}
+export function generateOutfit(allItems, mode, rules, profile, lockedIds=[], seed=1, options={}) {
   let n=seed>>>0; const random=()=>{n=(n*1664525+1013904223)>>>0;return n/4294967296;};
   const selected=[...new Set(lockedIds)].map(id=>allItems.find(i=>i.id===id)).filter(Boolean);
   const errors=validateLocks(selected,profile.avoidTags);
   if(errors.length) return {items:selected,errors,missing:[],warnings:[],reasons:[],complete:false};
-  const excluded=profile.avoidTags.map(s=>s.toLowerCase());
-  const eligible=allItems.filter(i=>(!i.availability||i.availability==='ready')&&i.modes.includes(mode)&&i.formality>=rules.minFormality&&i.formality<=rules.maxFormality&&!i.tags.some(t=>excluded.includes(t.toLowerCase()))&&(mode!=='Golf'||golfConflicts(i,rules).length===0));
+  const eligible=outfitCandidates(allItems,mode,rules,profile);
   const has=s=>selected.some(i=>slotFor(i)===s);
   function pick(slot,type=null) {
     const matches=i=>slotFor(i)===slot&&(type===null||accessoryType(i)===type);
@@ -125,7 +129,7 @@ export function generateOutfit(allItems, mode, rules, profile, lockedIds=[], see
       -(countsTowardPatternLimit(i,profile)&&patterns>=rules.maxPatterns?12:0)
       -(newCountedColors>0&&limitColors.length+newCountedColors>rules.maxColors?8:0)
       +(mode==='Golf'&&/\bpolo\b/i.test([i.name,i.subcategory,...i.tags].join(' '))?6:0)
-      -Math.abs((i.warmth??1)-profile.warmth)*2+random()*(2+profile.adventure*2);};
+      -Math.abs((i.warmth??1)-profile.warmth)*2+random()*(2+profile.adventure*2)+(options.rankBonus?.(i)||0);};
     const scored=options.map(item=>({item,score:rank(item)})).sort((a,b)=>b.score-a.score);
     if(scored[0])selected.push(scored[0].item);
   }
@@ -136,6 +140,7 @@ export function generateOutfit(allItems, mode, rules, profile, lockedIds=[], see
   }
   if(!has('dress')){pick('top');if(!has('leggings'))pick('bottom');if(!has('bottom'))pick('leggings');}
   if(rules.includeLayer)pick('layer');
+  if(options.includeCap)pick('cap');
   if(rules.requireSocks)pick('socks');
   pick('shoes');
   if(rules.includeAccessory)for(const type of Object.keys(ACCESSORY_LABELS))pick('accessory',type);
@@ -164,6 +169,7 @@ export function validateState(state) {
     ids.add(i.id);
   }
   for(const look of state.looks) if(typeof look.id!=='string'||typeof look.name!=='string'||!MODES.includes(look.mode)||!Array.isArray(look.itemIds)||!look.itemIds.every(id=>ids.has(id)))throw Error('A saved look refers to an invalid item.');
+  validateWeeklyPlanner(state.weeklyPlanner,MODES,ids);
   for(const cat of state.subcategories) if(!cat||!CATEGORIES.includes(cat.category)||typeof cat.path!=='string')throw Error('Invalid subcategory.');
   const p=state.profile;
   if(p.neutralColors!==undefined&&(!Array.isArray(p.neutralColors)||p.neutralColors.length>Object.keys(PALETTE).length||new Set(p.neutralColors).size!==p.neutralColors.length||!p.neutralColors.every(c=>typeof c==='string'&&Object.hasOwn(PALETTE,c))))throw Error('Invalid neutral color selection.');
