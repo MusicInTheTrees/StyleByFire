@@ -25,7 +25,7 @@ async function fixture(t,{port,legacy=false}={}){
  await copyFile(path.join(root,'app','weekly-settings.js'),path.join(project,'app','weekly-settings.js'));
  await copyFile(path.join(root,'app','mannequin.js'),path.join(project,'app','mannequin.js'));
  await writeFile(path.join(project,'package.json'),' {"type":"module"}');await writeFile(path.join(project,'app','index.html'),'<!doctype html><title>Test fixture</title>');
- for(const filename of ['ambient-diamond.png','ambient-geometric.png','ambient-lattice.png','ambient-dots.png','sidebar-pinstripe.png','private-fixture.png'])await writeFile(path.join(project,'app',filename),png);
+ for(const filename of ['ambient-diamond.png','ambient-geometric.png','ambient-lattice.png','ambient-dots.png','sidebar-pinstripe.png','brand-flame.png','brand-monogram.png','favicon-32.png','apple-touch-icon.png','private-fixture.png'])await writeFile(path.join(project,'app',filename),png);
  let legacyBytes;
  if(legacy){
   const state=empty();state.items=[fixtureItem('/media/seed-fixture.png'),fixtureItem('/media/11111111-1111-1111-1111-111111111111.png','uploaded')];state.reference=state.items[1].src;state.looks=[{id:'look',name:'Original look',mode:'Business',itemIds:['fixture','uploaded']}];
@@ -46,7 +46,7 @@ async function fixture(t,{port,legacy=false}={}){
 test('accounts preserve legacy corrections, isolate wardrobes and photos, and survive restart',async t=>{
  const f=await fixture(t,{port:4187,legacy:true}),{request,authenticate}=f;
  assert.equal((await request('/')).status,200);assert.equal((await (await request('/api/health')).json()).app,'StyleByFire');
- for(const filename of ['ambient-diamond.png','ambient-geometric.png','ambient-lattice.png','ambient-dots.png','sidebar-pinstripe.png'])assert.equal((await request('/'+filename)).status,200);
+ for(const filename of ['ambient-diamond.png','ambient-geometric.png','ambient-lattice.png','ambient-dots.png','sidebar-pinstripe.png','brand-flame.png','brand-monogram.png','favicon-32.png','apple-touch-icon.png'])assert.equal((await request('/'+filename)).status,200);
  assert.equal((await request('/private-fixture.png')).status,404);
  assert.deepEqual(await (await request('/api/auth')).json(),{user:null,needsSetup:true});
  assert.equal((await request('/api/web-import/preview',{method:'POST',json:{url:'https://127.0.0.1/private'}})).status,401);

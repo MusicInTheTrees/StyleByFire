@@ -86,6 +86,10 @@ Each account can keep 100 distinct outfit snapshots and up to 10 image versions 
 
 For a local Codex assistant, inspect a request with `node scripts/mannequin.mjs <username> <preview-id>`. The output supplies its prompt and ordered reference paths without account credentials. Inspect all references, generate the actual image, then attach it with `node scripts/mannequin.mjs <username> <preview-id> <generated-image-file>`. This helper makes no model calls and preserves the original photos.
 
+## App identity
+
+The blue-and-silver **tailored flame** is the primary app icon, used in the browser tab, app wordmark, touch icon, and Windows icon file. The **SF monogram** is a secondary mark on the sign-in card and app footer. The approved original images are kept in `assets/branding/`; small browser assets and the multi-resolution Windows icon are exported into `app/`. On Windows, `scripts/build-brand-icons.ps1` rebuilds these exports without changing the original artwork. An existing desktop shortcut can use `app/stylebyfire.ico` as its icon.
+
 ## Background patterns
 
 Four generated blue textile backgrounds—diamonds, linked geometry, lattice, and dots—keep the knit texture of the sock patterns that inspired them. The background stays fixed while the page scrolls. A lighter overlay makes the knit texture visible between readable outfit and text panels; a separate navy pinstripe fabric image covers the sidebar. By default, the main background changes every 18 seconds with a 6-second fade.
