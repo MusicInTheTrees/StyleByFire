@@ -1,3 +1,4 @@
+import {addWorkSuitability} from './app/work.js';
 import {addGolfSuitability} from './app/golf.js';
 import {readFile,writeFile,mkdir,rename} from 'node:fs/promises';
 import path from 'node:path';
@@ -29,7 +30,7 @@ export async function prepareDemoPhotos(folder,options={},entries=DEMO_CATALOG){
  const results=await Promise.allSettled(Array.from({length:4},worker));const failed=results.find(result=>result.status==='rejected');if(failed)throw failed.reason;return photos;
 }
 function sampleItem(entry,id,src){
- return addGolfSuitability({id,name:entry.name,category:entry.category,subcategory:entry.subcategory,role:entry.role,color:entry.color,colorVerified:true,pattern:entry.pattern||'Solid',formality:entry.formality,warmth:entry.role==='outerwear'?2:1,tags:['demo','blue-gray',...(entry.formality>=3?['tailored']:[])],modes:entry.mode?[entry.mode,...(entry.mode==='Sport'?['Casual']:[])]:['Casual','Business'],favorite:['oxford-shirt','watch','loafers'].includes(entry.key),src,notes:'Sample clothing for Jamie Demo. Safe to edit while testing.',stylistNotes:'Real retailer product photograph. Color family follows the product listing; screen colors may vary.',description:`${entry.name}. Product photograph from ${entry.sourceName}, used in Jamie Demo’s sample wardrobe.`,adjustments:structuredClone(DEFAULT_ADJUSTMENTS),demoKey:entry.key,sourceName:entry.sourceName,sourceUrl:entry.sourceUrl,sourceImageUrl:entry.sourceImageUrl});
+ return addWorkSuitability(addGolfSuitability({id,name:entry.name,category:entry.category,subcategory:entry.subcategory,role:entry.role,color:entry.color,colorVerified:true,pattern:entry.pattern||'Solid',formality:entry.formality,warmth:entry.role==='outerwear'?2:1,tags:['demo','blue-gray',...(entry.formality>=3?['tailored']:[])],modes:entry.mode?[entry.mode,...(entry.mode==='Sport'?['Casual']:[])]:['Casual','Business'],favorite:['oxford-shirt','watch','loafers'].includes(entry.key),src,notes:'Sample clothing for Jamie Demo. Safe to edit while testing.',stylistNotes:'Real retailer product photograph. Color family follows the product listing; screen colors may vary.',description:`${entry.name}. Product photograph from ${entry.sourceName}, used in Jamie Demo’s sample wardrobe.`,adjustments:structuredClone(DEFAULT_ADJUSTMENTS),demoKey:entry.key,sourceName:entry.sourceName,sourceUrl:entry.sourceUrl,sourceImageUrl:entry.sourceImageUrl}));
 }
 async function writePhoto(folder,photo){const filename=randomUUID()+'.'+photo.extension;await writeFile(path.join(folder,'images',filename),photo.bytes);return '/media/'+filename;}
 export async function createDemoWardrobe(folder,options={}){

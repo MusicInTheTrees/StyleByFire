@@ -27,7 +27,7 @@ test('bulk edit preserves originals, unselected items and looks; appends notes a
 });
 test('invalid bulk changes and stale selections fail without mutation',()=>{
  const s=state(),snapshot=structuredClone(s);
- for(const patch of [{color:'fake'},{formality:9},{modes:['Work']},{availability:'lost'},{rotation:45},{}])assert.throws(()=>prepareBulkEdit(s,['a'],patch));
+ for(const patch of [{color:'fake'},{formality:9},{modes:['Unknown occasion']},{availability:'lost'},{rotation:45},{}])assert.throws(()=>prepareBulkEdit(s,['a'],patch));
  assert.throws(()=>prepareBulkEdit(s,['missing'],{favorite:true}));assert.throws(()=>prepareBulkEdit(s,[],{favorite:true}));assert.deepEqual(s,snapshot);
 });
 test('unavailable clothing is retained but excluded from suggestions and rejected when pinned',()=>{

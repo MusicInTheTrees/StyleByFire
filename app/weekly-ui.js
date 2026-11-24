@@ -1,3 +1,4 @@
+import {savedWeeksMarkup} from './saved-weeks.js';
 import {MODES,slotFor,accessoryType,ACCESSORY_LABELS} from './domain.js';
 import {WEEK_DAYS,REUSE_GROUPS,defaultWeeklySettings} from './weekly-settings.js';
 import {weeklyPlanDetails,weeklyReuseText,reuseGroup} from './weekly-planner.js';
@@ -44,6 +45,7 @@ export function weeklyPage(state,draft,{escape,photo,icon}){
   }
   return `<section class="weekly-page">
     <div class="page-heading"><div><p class="eyebrow">THE WEEKLY EDIT</p><h1>Your week,<br><em>well dressed.</em></h1><p class="subtitle">A look for every kind of day. Repeat the pieces you love, on your terms.</p></div><span class="week-heading-mark" aria-hidden="true">${icon('calendar',42)}</span></div>
+    ${savedWeeksMarkup(state,draft,{escape})}
     <form id="weekly-form" class="weekly-controls">
       <details id="weekly-settings" ${plan?'':'open'}><summary><span><strong>Week settings</strong><span id="weekly-settings-summary">${enabled} days on · choose modes & reuse limits</span></span>${icon('sliders',20)}</summary>
         <div class="weekly-settings-body"><fieldset><legend>01 / Choose your days & styles</legend><p>Turn off any day. Random shuffles the available modes and looks for an outfit within your weekly reuse limits. Unlock a saved day before turning it off or changing its style.</p>
@@ -55,7 +57,7 @@ export function weeklyPage(state,draft,{escape,photo,icon}){
       </details>
       <div class="week-controls-footer"><p id="weekly-save-note" role="status">${dirty?'Unsaved settings. Regenerating also saves them.':lockedDays.size?`${lockedDays.size} ${lockedDays.size===1?'day is':'days are'} locked. Only unlocked outfits will change.`:plan?'Saved to your account. Generate again to replace unlocked outfits.':'Your stylist preferences and style playbook guide every outfit.'}</p><div class="button-row"><button class="btn secondary" type="submit" name="intent" value="save">Save settings</button><button class="btn primary" type="submit" name="intent" value="generate">${icon('spark',17)} ${lockedDays.size?'Regenerate unlocked days':plan?'Regenerate week':'Generate week'}</button></div></div>
     </form>
-    ${plan?`<section class="week-results" aria-label="Saved weekly outfits"><div class="week-overview"><div><p class="eyebrow">YOUR SAVED PLAN</p><h2>${details.completeDays} of ${plan.days.length} outfits have all essential pieces.</h2><p>${details.usage.length} different pieces${pants?` · ${pants} ${pants===1?'pair':'pairs'} of pants`:''} · ${reused.length} ${reused.length===1?'piece repeats':'pieces repeat'}</p></div><span>Generated ${escape(new Date(plan.generatedAt).toLocaleDateString())}</span></div>
+    ${plan?`<section class="week-results" aria-label="Saved weekly outfits"><div class="week-overview"><div><p class="eyebrow">YOUR CURRENT WEEK</p><h2>${details.completeDays} of ${plan.days.length} outfits have all essential pieces.</h2><p>${details.usage.length} different pieces${pants?` · ${pants} ${pants===1?'pair':'pairs'} of pants`:''} · ${reused.length} ${reused.length===1?'piece repeats':'pieces repeat'}</p></div><span>Generated ${escape(new Date(plan.generatedAt).toLocaleDateString())}</span></div>
       <p class="week-stale" id="weekly-stale" ${stale?'':'hidden'}>Settings have changed. The outfits below still use the saved plan's days and limits. Generate again to apply your changes.</p>
       ${details.completeDays<plan.days.length?'<p class="week-callout">Some days need more clothing. Expand their pieces and notes to see what is missing. Reuse limits stay enforced even when a complete outfit is not possible.</p>':''}
       ${details.reuseWarnings.map(warning=>`<p class="week-callout">${escape(warning)}</p>`).join('')}

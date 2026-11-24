@@ -1,11 +1,12 @@
+import {DEFAULT_WORK_RULES,workCandidate} from './work.js';
 import {DEFAULT_GOLF_RULES,golfCandidate,golfConflicts} from './golf.js';
-import {validateWeeklyPlanner} from './weekly-settings.js';
+import {validateWeeklyPlanner,validateSavedWeeks} from './weekly-settings.js';
 export const CATEGORIES = Object.freeze(['Cap', 'Top', 'Bottom', 'Socks', 'Shoes', 'Accessories']);
-export const MODES = Object.freeze(['Casual', 'Sport', 'Golf', 'Business', 'Red carpet']);
+export const MODES = Object.freeze(['Casual', 'Work', 'Sport', 'Golf', 'Business', 'Red carpet']);
 export const DEFAULT_SUBCATEGORIES = [
   ...['Bucket hats','Durags','Beanies','Baseball caps'].map(path=>({category:'Cap',path})),
   ...['Shirts / Button-down','Shirts / Polo / Short sleeve','Blouses','Dresses / Casual','Dresses / Evening','Dresses / Golf','Outerwear','Outerwear / Golf layers'].map(path=>({category:'Top',path})),
-  ...['Pants / Slacks','Pants / Golf','Shorts / Golf','Skirts','Skorts / Golf','Leggings'].map(path=>({category:'Bottom',path})),
+  ...['Pants / Slacks','Pants / Work / Utility','Pants / Sport / Relaxed trousers','Pants / Sport / Utility trousers','Pants / Golf','Shorts / Golf','Skirts','Skorts / Golf','Leggings'].map(path=>({category:'Bottom',path})),
   ...['Dress socks','Athletic socks'].map(path=>({category:'Socks',path})),
   ...['Sneakers','Golf shoes','Dress shoes','Boots','Sandals'].map(path=>({category:'Shoes',path})),
   ...['Ties / Neckties','Ties / Bow ties','Ties / Ascots','Belts','Glasses','Eyewear / Sunglasses','Jewelry / Earrings','Jewelry / Necklaces','Jewelry / Brooches','Jewelry / Rings','Watches','Wristbands','Wallets','Scarves'].map(path=>({category:'Accessories',path}))
@@ -14,6 +15,7 @@ export const PALETTE = { Black:'#292929', White:'#ece8df', Gray:'#777974', 'Ligh
 export const DEFAULT_RULES = {
   Casual: { minFormality:1, maxFormality:3, maxPatterns:2, maxColors:3, requireSocks:false, includeLayer:false, includeAccessory:true, note:'Comfortable everyday pieces. Adjust for the place, weather, and how you want to feel.' },
   Sport: { minFormality:1, maxFormality:2, maxPatterns:2, maxColors:3, requireSocks:true, includeLayer:false, includeAccessory:false, note:'Choose activity-appropriate footwear and clothing. Confirm stretch, breathability, and moisture management yourself.' },
+  Work: {...DEFAULT_WORK_RULES},
   Golf: {...DEFAULT_GOLF_RULES},
   Business: { minFormality:2, maxFormality:3, maxPatterns:1, maxColors:3, requireSocks:true, includeLayer:true, includeAccessory:true, note:'Business casual by default. A sport coat with separate trousers is not automatically a matching business suit.' },
   'Red carpet': { minFormality:4, maxFormality:5, maxPatterns:1, maxColors:2, requireSocks:false, includeLayer:false, includeAccessory:true, note:'Formal eveningwear. Confirm the invitation: a generated combination does not certify black-tie or any event’s dress code.' }
@@ -154,6 +156,10 @@ export function validateState(state) {
     state.rules.Golf=structuredClone(DEFAULT_GOLF_RULES);
     for(const item of state.items)if(item&&Array.isArray(item.modes)&&Array.isArray(item.tags)&&typeof item.subcategory==='string'&&!item.modes.includes('Golf')&&golfCandidate(item))item.modes.push('Golf');
   }
+  if(!Object.hasOwn(state.rules,'Work')){
+    state.rules.Work=structuredClone(DEFAULT_WORK_RULES);
+    for(const item of state.items)if(item&&Array.isArray(item.modes)&&Array.isArray(item.tags)&&typeof item.subcategory==='string'&&!item.modes.includes('Work')&&workCandidate(item))item.modes.push('Work');
+  }
   if(state.items.length>10000||state.looks.length>10000)throw Error('This wardrobe exceeds the local app limit.');
   const ids=new Set();
   for(const i of state.items) {
@@ -170,6 +176,8 @@ export function validateState(state) {
   }
   for(const look of state.looks) if(typeof look.id!=='string'||typeof look.name!=='string'||!MODES.includes(look.mode)||!Array.isArray(look.itemIds)||!look.itemIds.every(id=>ids.has(id)))throw Error('A saved look refers to an invalid item.');
   validateWeeklyPlanner(state.weeklyPlanner,MODES,ids);
+  validateSavedWeeks(state.savedWeeks,MODES,ids);
+  if(state.weeklyPlanner?.savedWeekId!==undefined&&!(state.savedWeeks||[]).some(w=>w.id===state.weeklyPlanner.savedWeekId))throw Error('The open saved week is not in this account.');
   for(const cat of state.subcategories) if(!cat||!CATEGORIES.includes(cat.category)||typeof cat.path!=='string')throw Error('Invalid subcategory.');
   const p=state.profile;
   if(p.neutralColors!==undefined&&(!Array.isArray(p.neutralColors)||p.neutralColors.length>Object.keys(PALETTE).length||new Set(p.neutralColors).size!==p.neutralColors.length||!p.neutralColors.every(c=>typeof c==='string'&&Object.hasOwn(PALETTE,c))))throw Error('Invalid neutral color selection.');

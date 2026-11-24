@@ -20,6 +20,7 @@ async function fixture(t,{port,legacy=false}={}){
  await mkdir(path.join(project,'app','thumbs'),{recursive:true});await mkdir(path.join(data,'images'),{recursive:true});
  for(const name of ['server.mjs','accounts.mjs','demo.mjs','demo-catalog.mjs','web-import.mjs','inventory.mjs','mannequin-store.mjs','mannequin-providers.mjs'])await copyFile(path.join(root,name),path.join(project,name));
  await mkdir(path.join(data,'demo-photos'),{recursive:true});for(const entry of DEMO_CATALOG)await writeFile(path.join(data,'demo-photos',demoCacheName(entry)),png);
+ await copyFile(path.join(root,'app','work.js'),path.join(project,'app','work.js'));
  await copyFile(path.join(root,'app','domain.js'),path.join(project,'app','domain.js'));
   await copyFile(path.join(root,'app','golf.js'),path.join(project,'app','golf.js'));
  await copyFile(path.join(root,'app','weekly-settings.js'),path.join(project,'app','weekly-settings.js'));
@@ -77,14 +78,16 @@ test('accounts preserve legacy corrections, isolate wardrobes and photos, and su
  otherState.items=[fixtureItem(src,'other-shirt')];otherState.items[0].name='Only in second account';assert.equal((await request('/api/state',{identity:other,method:'PUT',json:otherState})).status,200);
  const weekSettings=defaultWeeklySettings();state.weeklyPlanner={version:1,settings:weekSettings,plan:generateWeeklyPlan(state,weekSettings,14)};
  const keptDay=state.weeklyPlanner.plan.days.find(day=>day.itemIds.length);keptDay.locked=true;keptDay.edited=true;
+ state.savedWeeks=[{id:'saved-week',name:'Work week',createdAt:new Date().toISOString(),updatedAt:new Date().toISOString(),settings:structuredClone(weekSettings),plan:structuredClone(state.weeklyPlanner.plan)}];state.weeklyPlanner.savedWeekId='saved-week';
  state.items[0].description='Updated owner description';assert.equal((await request('/api/state',{identity:owner,method:'PUT',json:state})).status,200);
  assert.equal((await (await request('/api/state',{identity:other})).json()).weeklyPlanner,undefined);
+ const invalidSavedWeek=structuredClone(state);invalidSavedWeek.savedWeeks[0].plan.days[0].itemIds.push('other-shirt');assert.equal((await request('/api/state',{identity:owner,method:'PUT',json:invalidSavedWeek})).status,400);
  const invalidWeek=structuredClone(state);invalidWeek.weeklyPlanner.plan.days[0].itemIds.push('other-shirt');assert.equal((await request('/api/state',{identity:owner,method:'PUT',json:invalidWeek})).status,400);
  assert.equal((await request('/.data/accounts.json',{identity:owner})).status,404);
  assert.equal((await request('/api/auth/login',{method:'POST',json:{username:'fixture.owner',password:'wrong-password'}})).status,401);
  const registry=JSON.parse(await readFile(path.join(f.data,'accounts.json'),'utf8'));assert.equal(JSON.stringify(registry).includes('test-password'),false);assert.equal(registry.users.find(u=>u.id===owner.user.id).passwordHash.length,128);assert.equal(JSON.stringify(registry).includes(owner.cookie.split('=')[1]),false);
  await f.stop();await f.start();const restored=await (await request('/api/state',{identity:owner})).json();assert.equal(restored.items[0].description,'Updated owner description');assert.equal(restored.items[0].stylistNotes,'Camera made it gray; actually blue.');assert.equal((await (await request('/api/state',{identity:other})).json()).items[0].name,'Only in second account');
- assert.deepEqual(restored.weeklyPlanner,state.weeklyPlanner);
+ assert.deepEqual(restored.weeklyPlanner,state.weeklyPlanner);assert.deepEqual(restored.savedWeeks,state.savedWeeks);assert.equal((await (await request('/api/state',{identity:other})).json()).savedWeeks,undefined);
  const loggedIn=await authenticate('/api/auth/login',{username:'FIXTURE.OWNER',password:'test-password-owner'});assert.equal(loggedIn.user.id,owner.user.id);
  assert.equal((await request('/api/auth/logout',{identity:loggedIn,method:'POST'})).status,200);assert.equal((await request('/api/state',{identity:loggedIn})).status,401);assert.equal((await request(restored.items[0].src,{identity:loggedIn})).status,401);
  assert.deepEqual(await readFile(path.join(f.data,'wardrobe.json')),f.legacyBytes);

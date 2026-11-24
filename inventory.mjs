@@ -1,3 +1,4 @@
+import {addWorkSuitability} from './app/work.js';
 import {readdir,readFile,writeFile} from 'node:fs/promises';
 import path from 'node:path';
 import {createHash} from 'node:crypto';
@@ -17,6 +18,8 @@ export function inferLabels(relative){
  else if(['dresses','dress'].includes(root)){labels.role='dress';labels.subcategory=['Dresses',...rest].join(' / ');}
  else if(['shirts','tops','top','blouses'].includes(root)){labels.modes=['Casual','Business'];}
  if(/athletic|activewear|sportswear|running/i.test(relative)){labels.modes=['Sport','Casual'];labels.formality=1;}
+ if(labels.category==='Bottom'&&/^(pants|bottoms?)$/i.test(root)&&rest.some(s=>/^heavy ?duty$|^work$/i.test(s))){labels.subcategory='Pants / Work / Utility';labels.modes=['Work','Casual'];labels.formality=1;}
+ if(labels.category==='Bottom'&&rest.some(s=>/^sport$/i.test(s))){labels.subcategory='Pants / Sport / Relaxed trousers';labels.modes=['Casual','Sport'];labels.formality=2;}
  return labels;
 }
 export async function refreshInventory({root,data,state,seed}){
@@ -36,6 +39,7 @@ export async function refreshInventory({root,data,state,seed}){
    item={id:'folder-'+hash,name:pretty(path.basename(file,ext)),...inferLabels(relative),src:'/media/'+filename,sourcePath:relative,color:'Gray',colorVerified:false,pattern:'Solid',warmth:1,tags:[],favorite:false,notes:'Imported from your clothing folder. Review the name, color, pattern, formality, and occasion labels.',stylistNotes:'',adjustments:structuredClone(DEFAULT_ADJUSTMENTS)};
   }
   if(!item.modes.includes('Golf')&&golfCandidate(item))item.modes.push('Golf');
+  addWorkSuitability(item);
   next.items.push(item);known.add(relative);added++;
   if(item.subcategory&&!next.subcategories.some(s=>s.category===item.category&&s.path===item.subcategory))next.subcategories.push({category:item.category,path:item.subcategory});
  }

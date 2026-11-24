@@ -44,3 +44,14 @@ export function validateWeeklyPlanner(planner,modes,itemIds){
     for(const flag of ['locked','edited'])if(day[flag]!==undefined&&typeof day[flag]!=='boolean')throw Error('Invalid weekly outfit lock or editing preference.');
   });
 }
+
+export function validateSavedWeeks(weeks,modes,itemIds){
+ if(weeks===undefined)return;
+ if(!Array.isArray(weeks)||weeks.length>100)throw Error('Keep at most 100 saved weeks.');
+ const ids=new Set();
+ for(const week of weeks){
+  if(!week||typeof week.id!=='string'||!week.id||week.id.length>100||ids.has(week.id)||typeof week.name!=='string'||!week.name.trim()||week.name.length>100||!week.plan)throw Error('Invalid saved week.');
+  for(const key of ['createdAt','updatedAt'])if(typeof week[key]!=='string'||week[key].length>40||!Number.isFinite(Date.parse(week[key])))throw Error('Invalid saved week date.');
+  ids.add(week.id);validateWeeklyPlanner({version:1,settings:week.settings,plan:week.plan},modes,itemIds);
+ }
+}

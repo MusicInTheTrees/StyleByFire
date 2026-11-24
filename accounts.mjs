@@ -1,3 +1,4 @@
+import {addWorkSuitability} from './app/work.js';
 import {readFile,writeFile,mkdir,rename,copyFile,stat} from 'node:fs/promises';
 import path from 'node:path';
 import {randomUUID,randomBytes,scrypt as scryptCallback,timingSafeEqual,createHash} from 'node:crypto';
@@ -53,7 +54,7 @@ export class LocalAccounts{
    if(legacyBytes){
     try{wardrobe=validateState(JSON.parse(legacyBytes.toString()));}catch(error){throw failure('Your existing wardrobe needs repair before account setup. It has not been changed. '+error.message);}
     const backups=path.join(this.data,'backups');await mkdir(backups,{recursive:true});await writeFile(path.join(backups,`before-accounts-${Date.now()}.json`),legacyBytes,{flag:'wx'});
-   }else{wardrobe={...wardrobe,items:structuredClone(this.seed.items).map(addGolfSuitability),reference:this.seed.reference||null};wardrobe.subcategories=[...new Map([...wardrobe.subcategories,...wardrobe.items.map(i=>({category:i.category,path:i.subcategory}))].map(s=>[s.category+'|'+s.path,s])).values()];}
+   }else{wardrobe={...wardrobe,items:structuredClone(this.seed.items).map(addGolfSuitability).map(addWorkSuitability),reference:this.seed.reference||null};wardrobe.subcategories=[...new Map([...wardrobe.subcategories,...wardrobe.items.map(i=>({category:i.category,path:i.subcategory}))].map(s=>[s.category+'|'+s.path,s])).values()];}
    for(const source of new Set([...wardrobe.items.map(i=>i.src),wardrobe.reference].filter(Boolean))){const name=source.slice(7);if(!this.seed.media[name])await copyFile(path.join(this.data,'images',name),path.join(this.userFolder(user),'images',name));}
   }
   validateState(wardrobe);await atomicJSON(this.stateFile(user),wardrobe);this.registry.users.push(user);return this.session(user,res);

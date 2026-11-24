@@ -1,3 +1,4 @@
+import {changeSavedWeek,activeSavedWeek} from './saved-weeks.js';
 import {categorySetupPlan,installCategoryTree,categoryTreeMarkup} from './category-setup.js';
 import {defaultWeeklySettings} from './weekly-settings.js';
 import {generateWeeklyPlan,setWeeklyDayLock,changeWeeklySelection,replaceWeeklyDay} from './weekly-planner.js';
@@ -70,7 +71,7 @@ function renderAuth(message=''){
 }
 async function loadAccount(){
  weeklyDraft=null;weekEditor=null;editingLookId=null;
- clearPhotoCache();state=validateState(await api('/api/state'));page='designer';category='All';query='';subfilter='';colorfilter='';favoritesOnly=false;locked=[];outfit=null;saveFailure=false;saveQueue=Promise.resolve();editor=null;itemDraft=null;delete window.pendingRestore;
+ clearPhotoCache();state=validateState(await api('/api/state'));page=state.weeklyPlanner?.plan?'weekly':'designer';category='All';query='';subfilter='';colorfilter='';favoritesOnly=false;locked=[];outfit=null;saveFailure=false;saveQueue=Promise.resolve();editor=null;itemDraft=null;delete window.pendingRestore;
  buildMethod='stylist';pickerQuery='';const accountId=auth.user.id;
  weeklyPreviews.reset(accountId);savedPreviews.reset(accountId);
  try{autoMannequin=localStorage.getItem('stylebyfire-auto-preview:'+accountId)!=='false';}catch{autoMannequin=true;}
@@ -81,7 +82,7 @@ async function loadAccount(){
  else if(state.items.length)outfit=generateOutfit(state.items,mode,state.rules[mode],state.profile,[],++seed);
  render();window.scrollTo(0,0);
  // A completed SPA navigation lets password managers recognize successful sign-in.
- history.replaceState(null,'','#designer');
+ history.replaceState(null,'','#'+page);
 }
 async function authAction(endpoint,body){
  busy=true;try{auth=await api('/api/auth/'+endpoint,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body||{})});await loadAccount();accountEvents.postMessage('changed');}finally{busy=false;}
@@ -103,6 +104,29 @@ function render(){
 }
 function pageContent(){return {wardrobe:wardrobePage,designer:designerPage,weekly:()=>weeklyPage(state,weeklyDraft,{escape,photo,icon}),saved:savedPage,stylist:stylistPage,guidelines:guidelinesPage,studio:studioPage}[page]();}
 
+function openWeekSave(intent,id){
+ const saved=(state.savedWeeks||[]).find(w=>w.id===id),active=activeSavedWeek(state);
+ const label=intent==='update'?'Update saved week':intent==='rename'?'Rename week':'Save as new week';
+ const name=saved?.name||(active?active.name+' (copy)':'Week of '+new Date().toLocaleDateString());
+ openModal(`${modalHead('YOUR WEEK LIBRARY',label)}<p>${intent==='update'?'Replace this named week with the current outfits, locks and settings.':intent==='rename'?'Change the name without changing any outfits.':'Keep a separate named copy of these outfits, locks and settings.'}</p><form id="saved-week-form" data-intent="${intent}" data-week-id="${escape(id||'')}"><label>Week name<input name="name" maxlength="100" required value="${escape(name)}"></label><p id="saved-week-error" role="alert"></p><div class="button-row"><button class="btn primary" type="submit">${label}</button>${button('Cancel','close-modal','secondary')}</div></form>`);
+}
+function confirmWeekAction(action,id){
+ const saved=(state.savedWeeks||[]).find(w=>w.id===id);
+ const title=action==='delete'?'Delete saved week?':action==='clear'?'Start a new week?':'Open saved week?';
+ const description=action==='delete'?`Delete “${escape(saved?.name)}” from your week library? Your current working outfits and clothing stay available.`:action==='clear'?'Clear the current working plan and start fresh? Named saved weeks stay in your library. Save any working changes to a named week first.':`Open “${escape(saved?.name)}” in the planner? This replaces the current working plan. Save any working changes to a named week first.`;
+ openModal(`${modalHead('YOUR WEEK LIBRARY',title)}<p>${description}</p><div class="button-row"><button class="btn primary" data-week-confirm="${action}" data-week-id="${escape(id||'')}">${action==='delete'?'Delete week':action==='clear'?'Start new week':'Open week'}</button>${button('Cancel','close-modal','secondary')}</div>`);
+}
+async function applyWeekChange(action,options){
+ if(busy)return;const previous=state,accountId=auth.user.id;busy=true;
+ $$('#modal button').forEach(b=>b.disabled=true);
+ try{
+  state=changeSavedWeek(state,action,options);await persist();if(auth.user?.id!==accountId)return;
+  if(action!=='rename'&&action!=='delete')weeklyDraft=null;
+  weekEditor=null;$('#modal').close();render();toast(action==='delete'?'Saved week deleted.':action==='open'?'Saved week opened.':action==='clear'?'Ready to plan a new week.':'Week saved to your account.');
+ }catch(error){if(auth.user?.id===accountId){state=previous;const el=$('#saved-week-error');if(el)el.textContent=error.message;else toast(error.message);}}
+ finally{busy=false;$$('#modal button').forEach(b=>b.disabled=false);}
+}
+
 async function saveWeeklyForm(form,intent){
  const settings=weeklySettingsFromForm(new FormData(form),weeklyDraft||state.weeklyPlanner?.settings||defaultWeeklySettings(),state.weeklyPlanner?.plan);
  const accountId=auth.user.id,previousPlanner=state.weeklyPlanner;
@@ -114,7 +138,7 @@ async function saveWeeklyForm(form,intent){
    if(auth.user?.id!==accountId)return;
   }
   const plan=intent==='generate'?generateWeeklyPlan(state,settings,++seed):state.weeklyPlanner?.plan||null;
-  state.weeklyPlanner={version:1,settings,plan};
+  state.weeklyPlanner={...previousPlanner,version:1,settings,plan};
   await persist();
   if(auth.user?.id!==accountId)return;
   weeklyDraft=null;render();
@@ -172,7 +196,7 @@ function bulkSelect(name,label,options){return `<label>${label}<select name="${n
 function openBulkEdit(){
  const items=state.items.filter(i=>selectedItems.has(i.id));if(!items.length)return toast('Select pieces using the checkboxes on their photos.');
  bulkPreview=null;
- openModal(`${modalHead('WARDROBE CLEANUP',`Edit ${items.length} selected pieces`)}<details><summary>Selected pieces (${items.length})</summary><ul>${items.map(i=>`<li>${escape(i.name)}</li>`).join('')}</ul></details><p class="field-note">Only fields you choose will change. Notes are appended, and original photos are preserved.</p><form id="bulk-form"><div class="form-grid">${bulkSelect('color','Primary color',Object.keys(PALETTE).map(c=>[c,c]))}${bulkSelect('secondaryColor','Secondary color',[['__clear','Remove secondary color'],...Object.keys(PALETTE).map(c=>[c,c])])}${bulkSelect('pattern','Pattern',['Solid','Textured','Stripes','Checks','Argyle','Geometric','Diamond','Dots','Floral','Color block','Other'].map(c=>[c,c]))}${bulkSelect('colorVerified','Color verification',[['true','Mark checked against garment'],['false','Needs verification']])}${bulkSelect('availability','Availability',Object.entries(AVAILABILITY))}${bulkSelect('favorite','Favorites',[['true','Favorite'],['false','Not a favorite']])}${bulkSelect('formality','Formality',[[1,'1 · Relaxed'],[2,'2 · Smart casual'],[3,'3 · Tailored'],[4,'4 · Formal evening'],[5,'5 · Black tie']])}${bulkSelect('warmth','Warmth',[[0,'Lightweight'],[1,'Everyday'],[2,'Warm']])}${bulkSelect('rotation','Rotate photos',[[90,'90° clockwise'],[180,'180°'],[270,'90° counterclockwise']])}<label>Subcategory path<input name="subcategory" placeholder="Blank keeps existing"></label></div><label>Add tags<input name="addTags" placeholder="Comma-separated tags"></label><label>Remove tags<input name="removeTags" placeholder="Comma-separated tags"></label><label>Replace suitable occasions<input name="modes" placeholder="Blank keeps existing; e.g. Casual, Business"><small>Use Casual, Sport, Golf, Business, or Red carpet.</small></label><label>Append personal note<textarea name="notes" rows="2"></textarea></label><label>Append styling / color correction<textarea name="stylistNotes" rows="2"></textarea></label><button class="btn primary full" type="submit">Preview changes</button></form>`,'wide-modal');
+ openModal(`${modalHead('WARDROBE CLEANUP',`Edit ${items.length} selected pieces`)}<details><summary>Selected pieces (${items.length})</summary><ul>${items.map(i=>`<li>${escape(i.name)}</li>`).join('')}</ul></details><p class="field-note">Only fields you choose will change. Notes are appended, and original photos are preserved.</p><form id="bulk-form"><div class="form-grid">${bulkSelect('color','Primary color',Object.keys(PALETTE).map(c=>[c,c]))}${bulkSelect('secondaryColor','Secondary color',[['__clear','Remove secondary color'],...Object.keys(PALETTE).map(c=>[c,c])])}${bulkSelect('pattern','Pattern',['Solid','Textured','Stripes','Checks','Argyle','Geometric','Diamond','Dots','Floral','Color block','Other'].map(c=>[c,c]))}${bulkSelect('colorVerified','Color verification',[['true','Mark checked against garment'],['false','Needs verification']])}${bulkSelect('availability','Availability',Object.entries(AVAILABILITY))}${bulkSelect('favorite','Favorites',[['true','Favorite'],['false','Not a favorite']])}${bulkSelect('formality','Formality',[[1,'1 · Relaxed'],[2,'2 · Smart casual'],[3,'3 · Tailored'],[4,'4 · Formal evening'],[5,'5 · Black tie']])}${bulkSelect('warmth','Warmth',[[0,'Lightweight'],[1,'Everyday'],[2,'Warm']])}${bulkSelect('rotation','Rotate photos',[[90,'90° clockwise'],[180,'180°'],[270,'90° counterclockwise']])}<label>Subcategory path<input name="subcategory" placeholder="Blank keeps existing"></label></div><label>Add tags<input name="addTags" placeholder="Comma-separated tags"></label><label>Remove tags<input name="removeTags" placeholder="Comma-separated tags"></label><label>Replace suitable occasions<input name="modes" placeholder="Blank keeps existing; e.g. Casual, Business"><small>Use Casual, Work, Sport, Golf, Business, or Red carpet.</small></label><label>Append personal note<textarea name="notes" rows="2"></textarea></label><label>Append styling / color correction<textarea name="stylistNotes" rows="2"></textarea></label><button class="btn primary full" type="submit">Preview changes</button></form>`,'wide-modal');
  if(bulkDraft)for(const [key,value] of Object.entries(bulkDraft)){const input=$('#bulk-form [name="'+key+'"]');if(input)input.value=value;}
 }
 function previewBulkForm(data){
@@ -326,6 +350,10 @@ async function prepareRestore(file){if(file.size>250*1024*1024)throw Error('This
 async function performRestore(){const backup=window.pendingRestore;if(!backup)return;busy=true;$$('#modal button').forEach(b=>b.disabled=true);try{const replacements={};for(const src of new Set([...backup.state.items.map(i=>i.src),backup.state.reference].filter(Boolean))){const data=backup.assets[src];const bytes=Uint8Array.from(atob(data.split(',')[1]),c=>c.charCodeAt(0));const blob=new Blob([bytes],{type:data.match(/^data:([^;]+)/)[1]});await loadPhoto(URL.createObjectURL(blob)).catch(()=>{throw Error('The backup contains a photo that cannot be decoded.');});replacements[src]=(await api('/api/images',{method:'POST',body:blob})).src;}const next=structuredClone(backup.state);for(const i of next.items)i.src=replacements[i.src];if(next.reference)next.reference=replacements[next.reference];await api('/api/state',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(next)});state=next;weeklyDraft=null;weekEditor=null;editingLookId=null;locked=[];outfit=null;delete window.pendingRestore;$('#modal').close();render();toast('Your wardrobe has been restored.');}finally{busy=false;$$('#modal button').forEach(b=>b.disabled=false);}}
 document.addEventListener('click',async e=>{const el=e.target.closest('button,[data-nav]');if(!el||el.disabled||busy)return;try{
  if(el.dataset.savedPreview){const look=state.looks.find(look=>look.id===el.dataset.savedPreview),savedPreview=savedPreviews.selected(el.dataset.savedPreview);if(!look||!savedPreview)return;const accountId=auth.user.id;savedPreviews.pause();await saveQueue;if(auth.user?.id!==accountId)return;await openMannequin({state,itemIds:look.itemIds,mode:look.mode,api,openModal,modalHead,photo,escape,accountId,savedPreview,contextLabel:look.name});return;}
+ if(el.dataset.savedWeekOpen){confirmWeekAction('open',el.dataset.savedWeekOpen);return;}
+ if(el.dataset.savedWeekDelete){confirmWeekAction('delete',el.dataset.savedWeekDelete);return;}
+ if(el.dataset.savedWeekRename){openWeekSave('rename',el.dataset.savedWeekRename);return;}
+ if(el.dataset.weekConfirm){await applyWeekChange(el.dataset.weekConfirm,{id:el.dataset.weekId});return;}
  if(el.dataset.weekPreview){const day=state.weeklyPlanner?.plan?.days.find(day=>day.id===el.dataset.weekPreview);if(!day)return;const accountId=auth.user.id,savedPreview=weeklyPreviews.selected(day.id);weeklyPreviews.pause();await saveQueue;if(auth.user?.id!==accountId)return;await openMannequin({state,itemIds:day.itemIds,mode:day.mode,api,openModal,modalHead,photo,escape,accountId,savedPreview,contextLabel:day.id[0].toUpperCase()+day.id.slice(1)});return;}
  if(el.dataset.weekLock){await toggleWeeklyDayLock(el.dataset.weekLock);return;}
  if(el.dataset.weekEdit){openWeeklyEditor(el.dataset.weekEdit,el.dataset.weekReplace||null);return;}
@@ -347,9 +375,12 @@ document.addEventListener('click',async e=>{const el=e.target.closest('button,[d
  if(el.dataset.openLook){const look=state.looks.find(look=>look.id===el.dataset.openLook);if(!look)return;editingLookId=look.id;mode=look.mode;buildMethod='manual';setManualPieces(look.itemIds.map(id=>state.items.find(item=>item.id===id)).filter(Boolean));page='designer';category='All';pickerQuery='';render();window.scrollTo(0,0);return;}
  if(el.dataset.deleteLook){if(editingLookId===el.dataset.deleteLook)editingLookId=null;state.looks=state.looks.filter(l=>l.id!==el.dataset.deleteLook);await persist();render();toast('Look removed. Your clothing stays in the wardrobe.');return;}
  if(el.dataset.removeItem){const i=state.items.find(i=>i.id===el.dataset.removeItem);openModal(`${modalHead('REMOVE FROM WARDROBE','Remove this piece?')}<p>${escape(i.name)} will be removed from your wardrobe, saved looks, and weekly outfits, including locked days. Its original photo file will stay on your computer.</p><button class="btn primary" data-confirm-remove="${i.id}">Remove piece</button>`);return;}
- if(el.dataset.confirmRemove){const id=el.dataset.confirmRemove;state.items=state.items.filter(i=>i.id!==id);state.looks=state.looks.map(l=>({...l,itemIds:l.itemIds.filter(x=>x!==id)}));if(state.weeklyPlanner?.plan)for(const day of state.weeklyPlanner.plan.days)day.itemIds=day.itemIds.filter(x=>x!==id);locked=locked.filter(x=>x!==id);outfit=null;await persist();$('#modal').close();render();toast('Piece removed. Original photo preserved.');return;}
+ if(el.dataset.confirmRemove){const id=el.dataset.confirmRemove;state.items=state.items.filter(i=>i.id!==id);state.looks=state.looks.map(l=>({...l,itemIds:l.itemIds.filter(x=>x!==id)}));if(state.weeklyPlanner?.plan)for(const day of state.weeklyPlanner.plan.days)day.itemIds=day.itemIds.filter(x=>x!==id);for(const week of state.savedWeeks||[])for(const day of week.plan.days)day.itemIds=day.itemIds.filter(x=>x!==id);locked=locked.filter(x=>x!==id);outfit=null;await persist();$('#modal').close();render();toast('Piece removed. Original photo preserved.');return;}
  if(el.dataset.removeSub){e.preventDefault();const [c,p]=el.dataset.removeSub.split('|');if(state.items.some(i=>i.category===c&&(i.subcategory===p||i.subcategory.startsWith(p+' / '))))return toast('This path contains clothing. Move those pieces before removing it.');state.subcategories=state.subcategories.filter(s=>!(s.category===c&&s.path===p));await persist();openCategories();return;}
  switch(el.dataset.action){
+  case 'week-save-new':openWeekSave('new');break;
+  case 'week-update':openWeekSave('update',state.weeklyPlanner?.savedWeekId);break;
+  case 'week-new':confirmWeekAction('clear');break;
   case 'prepare-week-previews':await saveQueue;await weeklyPreviews.update(state,{refresh:true});await weeklyPreviews.prepare();break;
   case 'refresh-week-previews':await weeklyPreviews.update(state,{refresh:true});break;
   case 'copy-week-request':{const message=weeklyPreviews.requestMessage();if(!message)break;try{await navigator.clipboard.writeText(message);toast('Copied. Send this week’s requests to Codex to create the images.');}catch{$('#week-codex-request')?.focus();$('#week-codex-request')?.select();toast('Select and copy the week’s request, then send it to Codex.');}break;}
@@ -420,6 +451,7 @@ document.addEventListener('change',e=>{
 document.addEventListener('input',e=>{if(e.target.id==='week-piece-search'&&weekEditor){weekEditor.query=e.target.value;$('#week-piece-options').innerHTML=weeklyEditorOptions(state,weekEditor,{escape,photo});renderAdjustedImages($('#week-piece-options'));}});
 
 document.addEventListener('submit',async e=>{e.preventDefault();if(busy)return;const form=e.target;const data=new FormData(form);try{
+ if(form.id==='saved-week-form'){await applyWeekChange(form.dataset.intent,{id:form.dataset.weekId,name:new FormData(form).get('name'),newId:crypto.randomUUID(),settings:weeklyDraft||state.weeklyPlanner?.settings});return;}
  if(form.id==='weekly-form'){await saveWeeklyForm(form,e.submitter?.value||'save');return;}
  if(form.id==='bulk-form'){previewBulkForm(data);return;}
  if(form.id==='auth-form'){const submit=form.querySelector('[type=submit]');submit.disabled=true;try{await authAction(authMode==='register'?'register':'login',Object.fromEntries(data));}catch(err){$('#auth-error').textContent=err.message;submit.disabled=false;}return;}

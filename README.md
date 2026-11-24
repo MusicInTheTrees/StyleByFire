@@ -48,6 +48,10 @@ Each day has clothing photos, every selected accessory, style notes, **Edit piec
 
 The rewear summary lists which days use each repeated piece. Your style playbook, color corrections, stylist exclusions, and clothing availability guide suggestions for unlocked days. The planner does not mark items worn, change laundry status, or generate AI images in bulk.
 
+**Save week** keeps a named copy of the current outfits, day locks, and settings in your account (up to 100 weeks). Use **Open / edit** to bring one back into the planner, **Update saved week** to overwrite it, or **Save as new week** to keep a separate copy. You can rename or delete saved weeks. Opening another week or starting fresh asks before replacing your working plan. Deleting a named copy leaves the current working outfits intact.
+
+Your working plan still autosaves when you generate, edit pieces, or lock days. Editing a named week does not overwrite its library copy until you choose Update saved week. When an account has a current plan, signing in or reopening the app opens the weekly planner. Named weeks are included in wardrobe backups and retain their day modes and locks; removing clothing also removes its references from named weeks. Available mannequin previews are matched again when a week is opened.
+
 Settings, edits, day locks, and the latest plan belong to the signed-in account, survive restarts, and are included in wardrobe backups. Changing settings keeps the previous plan visible with a reminder to regenerate. Removing a clothing item removes its references from all weekly outfits, including locked days; current item warnings are reassessed when viewing the plan. Limits apply across the entire generated plan, including locked outfits; this is a reusable Monday–Sunday planner, not a dated calendar or wear-history tracker.
 
 Each planned day also has a large **mannequin preview above its clothing pieces**. Saved images appear when they match that day's full selection, mode, photo edits, and styling/color corrections; select the image to enlarge it. Repeated outfits share a preview, and unchanged locked outfits keep their matching image when the week is regenerated. Editing a day clears an outdated image without deleting it from preview history.
@@ -119,6 +123,12 @@ Open an item to rotate its image or add **Personal notes** and **Styling & color
 Photo studio provides exposure, contrast, saturation, temperature, tint, rotation, cropping, original-image comparison, and color-family sampling. Adjustments are stored separately; original images are not rewritten. Starting a crop resets rotation and the previous crop so the crop coordinates remain predictable.
 
 For an existing personal installation, **Refresh inventory** scans nested folders under `ClothingImages/`, adds new files, and preserves notes, corrected labels, favorites, rotations, and saved looks. This source-folder access belongs to the account that claims the original wardrobe. Other accounts, including Jamie Demo, import their own images instead.
+
+## Work looks
+
+**Work** is an adjustable everyday workwear occasion available in the outfit designer, weekly planner, saved looks, mannequin previews, and clothing editor. It starts with practical shirts/polos, trousers, socks, and suitable footwear; Business stays separate. Older wardrobes gain Work once, preserving their other occasions, notes, corrected colors, and custom guidelines. Later edits to Work suitability remain authoritative.
+
+The category tree includes **Bottom / Pants / Work / Utility** and **Pants / Sport / Relaxed trousers** or **Utility trousers**. HeavyDuty folders import as utility work pants; Sport pants import as relaxed sport trousers. Review color and activity suitability against the actual garment.
 
 ## Wardrobe cleanup
 
