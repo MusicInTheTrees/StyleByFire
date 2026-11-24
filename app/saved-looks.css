@@ -5,3 +5,6 @@
 .saved-look-preview:hover{background:#cfdeee}
 .saved-look-preview:focus-visible{outline:3px solid var(--accent);outline-offset:-4px}
 .saved-preview-badge{position:absolute;right:12px;bottom:12px;padding:5px 9px;border:1px solid #c5d4e6;border-radius:5px;background:#f5f8fcf2;color:#294c79;font-size:10px;font-weight:600;pointer-events:none}
+.saved-look-editing{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;padding:16px 18px;margin-bottom:18px;border:1px solid #bfd0e6;border-radius:8px;background:#edf3fb}
+.saved-look-editing>div{min-width:0;flex:1 1 240px}.saved-look-editing strong{display:block;overflow-wrap:anywhere;font-size:17px;margin:3px 0 5px}.saved-look-editing p{font-size:12px;color:#48617f}.saved-look-editing .text-button{font-size:12px;flex-shrink:0}
+.look-save-note{margin:0 0 20px;font-size:14px}

@@ -29,7 +29,8 @@ export function manualOutfit(items,mode,state){
 export function restoreOutfitDraft(value,state){
  if(!value||!MODES.includes(value.mode)||!Array.isArray(value.itemIds)||value.itemIds.length>20||!value.itemIds.every(id=>typeof id==='string'))return null;
  const items=[...new Set(value.itemIds)].map(id=>state.items.find(item=>item.id===id)).filter(Boolean);
- return {mode:value.mode,method:value.method==='manual'?'manual':'stylist',items,locked:Array.isArray(value.locked)?value.locked.filter(id=>state.items.some(item=>item.id===id)):[]};
+ const editingLookId=typeof value.editingLookId==='string'&&state.looks.some(look=>look.id===value.editingLookId)?value.editingLookId:null;
+ return {mode:value.mode,method:value.method==='manual'?'manual':'stylist',items,editingLookId,locked:Array.isArray(value.locked)?value.locked.filter(id=>state.items.some(item=>item.id===id)):[]};
 }
 
 export function previewMatchesOutfit(detail,state,itemIds,mode){
