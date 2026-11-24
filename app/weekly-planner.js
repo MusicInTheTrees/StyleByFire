@@ -1,4 +1,5 @@
-import {MODES,generateOutfit,outfitCandidates,slotFor,assessOutfit} from './domain.js';
+import {MODES,generateOutfit,outfitCandidates,slotFor,assessOutfit,validateLocks} from './domain.js';
+import {toggleOutfitPiece} from './outfit-builder.js';
 import {WEEK_DAYS,validateWeeklySettings} from './weekly-settings.js';
 
 export function reuseGroup(item){
@@ -17,6 +18,51 @@ export function reuseLimit(item,settings){
 }
 const dayIndex=id=>WEEK_DAYS.findIndex(([key])=>key===id);
 const dayName=id=>WEEK_DAYS.find(([key])=>key===id)?.[1]||id;
+
+export function setWeeklyDayLock(planner,dayId,locked){
+  if(typeof locked!=='boolean'||!planner?.plan?.days.some(day=>day.id===dayId))throw Error('Choose an outfit in your saved week first.');
+  const next=structuredClone(planner),day=next.plan.days.find(day=>day.id===dayId);
+  day.locked=locked;
+  // Locking the currently displayed outfit also keeps its existing day/mode if
+  // preferences were changed after this plan was generated.
+  if(locked){
+    const saved=next.plan.settings.days.find(day=>day.id===dayId);
+    Object.assign(next.settings.days.find(day=>day.id===dayId),{enabled:true,mode:saved.mode});
+  }
+  return next;
+}
+
+export function changeWeeklySelection(items,piece,replaceId=null){
+  if(replaceId){
+    if(!items.some(item=>item.id===replaceId))throw Error('That piece is no longer in this outfit. Choose another piece to change.');
+    if(piece.id===replaceId)return [...items];
+    if(items.some(item=>item.id===piece.id))throw Error('That piece is already in this outfit. Choose another replacement.');
+  }
+  return toggleOutfitPiece(replaceId?items.filter(item=>item.id!==replaceId):items,piece);
+}
+
+export function replaceWeeklyDay(state,plan,dayId,itemIds){
+  if(!plan?.days.some(day=>day.id===dayId))throw Error('This day is no longer in the saved plan. Reopen the weekly planner.');
+  if(!Array.isArray(itemIds)||itemIds.length>20||new Set(itemIds).size!==itemIds.length)throw Error('Choose up to 20 different pieces for this outfit.');
+  const items=itemIds.map(id=>state.items.find(item=>item.id===id));
+  if(items.some(item=>!item))throw Error('A selected piece is no longer in your wardrobe.');
+  const errors=validateLocks(items);
+  if(errors.length)throw Error(errors.join(' '));
+  const beforeUses=new Map(),otherUses=new Map();
+  for(const day of plan.days)for(const id of day.itemIds){
+    beforeUses.set(id,(beforeUses.get(id)||0)+1);
+    if(day.id!==dayId)otherUses.set(id,(otherUses.get(id)||0)+1);
+  }
+  for(const item of items){
+    const count=(otherUses.get(item.id)||0)+1,limit=reuseLimit(item,plan.settings);
+    // Permit repairs to a plan whose categories changed, without adding a new
+    // violation or making an existing overuse worse.
+    if(count>limit&&count>(beforeUses.get(item.id)||0))throw Error(`${item.name} would be used on ${count} days; this saved week's limit is ${limit}. Choose another piece, or update reuse settings and regenerate.`);
+  }
+  const next=structuredClone(plan),day=next.days.find(day=>day.id===dayId);
+  day.itemIds=[...itemIds];day.edited=true;
+  return next;
+}
 function hash(value,seed){
   let n=seed>>>0;
   for(const ch of value)n=Math.imul(n^ch.charCodeAt(0),16777619)>>>0;
@@ -24,17 +70,43 @@ function hash(value,seed){
   return (n>>>0)/4294967296;
 }
 
-export function generateWeeklyPlan(state,settings,seed=Date.now()){
+export function generateWeeklyPlan(state,settings,seed=Date.now(),previousPlan=state.weeklyPlanner?.plan){
   validateWeeklySettings(settings,MODES);
+  const lockedDays=new Map((previousPlan?.days||[]).filter(day=>day.locked===true).map(day=>[day.id,day]));
+  const reserved=new Map();
+  for(const day of lockedDays.values()){
+    const preference=settings.days.find(setting=>setting.id===day.id);
+    if(!preference?.enabled||(preference.mode!=='Random'&&preference.mode!==day.mode))throw Error(`${dayName(day.id)} is locked. Unlock that day before turning it off or changing its style mode.`);
+    for(const id of day.itemIds){
+      if(!state.items.some(item=>item.id===id))throw Error(`A piece in locked ${dayName(day.id)} is missing. Edit that outfit before regenerating.`);
+      reserved.set(id,(reserved.get(id)||0)+1);
+    }
+  }
+  for(const [id,count] of reserved){
+    const item=state.items.find(item=>item.id===id),limit=reuseLimit(item,settings);
+    if(count>limit)throw Error(`${item.name} is already used on ${count} locked days, above your ${limit}-day limit. Increase its reuse limit or unlock/edit one of those days.`);
+  }
   const days=settings.days.filter(day=>day.enabled);
   if(!days.length)throw Error('Turn on at least one day to generate a week.');
   const candidates=Object.fromEntries(MODES.map(mode=>[mode,outfitCandidates(state.items,mode,state.rules[mode],state.profile)]));
   const viable=MODES.filter(mode=>generateOutfit(candidates[mode],mode,state.rules[mode],state.profile,[],seed).complete);
   const randomModes=viable.length?viable:MODES;
   const resolved=days.map(day=>({...day,modes:day.mode==='Random'?[...randomModes].sort((a,b)=>hash(day.id+a,seed)-hash(day.id+b,seed)):[day.mode]}));
-  let beam=[{days:[],uses:new Map(),cost:0}];
+  // Reserve every locked day's pieces before choosing Monday, including locks
+  // later in the week. Appending a locked day must not count its usage twice.
+  let beam=[{days:[],uses:new Map(reserved),cost:0}];
   for(let index=0;index<resolved.length;index++){
     const day=resolved[index],next=[];
+    if(lockedDays.has(day.id)){
+      const locked=lockedDays.get(day.id);
+      beam=beam.map(branch=>{
+        const previous=branch.days.at(-1);
+        const consecutive=settings.preferConsecutive&&previous&&dayIndex(day.id)-dayIndex(previous.id)===1;
+        const bonus=consecutive?locked.itemIds.filter(id=>previous.itemIds.includes(id)).length*16:0;
+        return {...branch,days:[...branch.days,structuredClone(locked)],cost:branch.cost-bonus};
+      });
+      continue;
+    }
     for(const branch of beam){
      for(const [choice,mode] of day.modes.entries()){
       const rules=state.rules[mode];
@@ -97,8 +169,11 @@ export function weeklyPlanDetails(state,plan){
       usage.get(item.id).days.push(day.id);
     }
     const assessment=assessOutfit(items,day.mode,state.rules[day.mode],state.profile);
-    if(assessment.missing.length)assessment.warnings.unshift(`No eligible ${assessment.missing.join(', ').toLowerCase()} was selected within your weekly limits. Add suitable pieces, change this day's mode, or increase reuse and generate again.`);
+    if(assessment.missing.length)assessment.warnings.unshift(day.edited?`This edited outfit still needs ${assessment.missing.join(', ').toLowerCase()}. Use Edit pieces to finish it.`:`No eligible ${assessment.missing.join(', ').toLowerCase()} was selected within your weekly limits. Add suitable pieces, change this day's mode, or increase reuse and generate again.`);
     if(day.itemIds.length!==items.length)assessment.warnings.unshift('A piece in this outfit has been removed from your wardrobe.');
+    const excluded=items.filter(item=>item.tags.some(tag=>state.profile.avoidTags.some(avoid=>avoid.toLowerCase()===tag.toLowerCase())));
+    if(excluded.length)assessment.warnings.push(`Your stylist excludes tags on: ${excluded.map(item=>item.name).join(', ')}. Your saved choices are kept until you edit or unlock and regenerate.`);
+    if(day.locked&&!assessment.complete)assessment.warnings.push('This day is locked. Regeneration will keep these pieces and will not fill its missing slots.');
     return {...day,items,...assessment};
   });
   const reuseWarnings=[];

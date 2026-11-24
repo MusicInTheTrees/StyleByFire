@@ -41,5 +41,6 @@ export function validateWeeklyPlanner(planner,modes,itemIds){
   if(typeof plan.generatedAt!=='string'||plan.generatedAt.length>40||!Number.isFinite(Date.parse(plan.generatedAt))||!Array.isArray(plan.days)||!enabled.length||plan.days.length!==enabled.length)throw Error('Invalid saved weekly plan.');
   plan.days.forEach((day,index)=>{
     if(!day||day.id!==enabled[index].id||!modes.includes(day.mode)||(enabled[index].mode!=='Random'&&day.mode!==enabled[index].mode)||!Array.isArray(day.itemIds)||day.itemIds.length>20||new Set(day.itemIds).size!==day.itemIds.length||!day.itemIds.every(id=>itemIds.has(id)))throw Error('A weekly outfit refers to an invalid day, mode, or clothing item.');
+    for(const flag of ['locked','edited'])if(day[flag]!==undefined&&typeof day[flag]!=='boolean')throw Error('Invalid weekly outfit lock or editing preference.');
   });
 }

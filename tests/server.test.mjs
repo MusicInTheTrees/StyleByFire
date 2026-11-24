@@ -76,6 +76,7 @@ test('accounts preserve legacy corrections, isolate wardrobes and photos, and su
  const upload=await request('/api/images',{identity:other,method:'POST',body:png});assert.equal(upload.status,201);const {src}=await upload.json();assert.equal((await request(src,{identity:other})).status,200);assert.equal((await request(src,{identity:owner})).status,404);
  otherState.items=[fixtureItem(src,'other-shirt')];otherState.items[0].name='Only in second account';assert.equal((await request('/api/state',{identity:other,method:'PUT',json:otherState})).status,200);
  const weekSettings=defaultWeeklySettings();state.weeklyPlanner={version:1,settings:weekSettings,plan:generateWeeklyPlan(state,weekSettings,14)};
+ const keptDay=state.weeklyPlanner.plan.days.find(day=>day.itemIds.length);keptDay.locked=true;keptDay.edited=true;
  state.items[0].description='Updated owner description';assert.equal((await request('/api/state',{identity:owner,method:'PUT',json:state})).status,200);
  assert.equal((await (await request('/api/state',{identity:other})).json()).weeklyPlanner,undefined);
  const invalidWeek=structuredClone(state);invalidWeek.weeklyPlanner.plan.days[0].itemIds.push('other-shirt');assert.equal((await request('/api/state',{identity:owner,method:'PUT',json:invalidWeek})).status,400);
