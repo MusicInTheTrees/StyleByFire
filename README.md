@@ -122,11 +122,56 @@ image folder, keeping the relative layout (or update the local configuration).
 Create a fresh local config when using a different folder name. Do not put account
 data or credentials in the image repository.
 
-Commit and push the image repository separately when you want a cloud copy, and
-pull it on another computer before starting the app. Concurrent edits are not
-merged by the app. Keep a personal image repository private unless you intend to
-publish those photos. Git ignores personal photo formats in the app repository;
-the app's reusable artwork and intentionally published preview gallery are exceptions.
+Use **Sync images to GitHub** in the sidebar or account menu, then **Sync now**, to
+commit and upload new or changed images. The small-screen top bar also has a sync
+button. This is an upload backup: it does not download remote changes or delete
+remote files. Pull the image repository separately on another computer before
+starting the app; if remote history has moved ahead, the app stops and explains how
+to resolve it without overwriting work. A failed push keeps its local commit for a retry.
+
+App sync requires Git and GitHub CLI (`gh auth login`), a private personal GitHub
+repository with an existing remote branch, and the repository owner's GitHub login.
+Set the image repository's local author/committer email to that account's GitHub
+noreply address (`<numeric-id>+<username>@users.noreply.github.com`); identity
+mismatches stop sync. The app never changes global Git configuration. Only the first
+real account can sync the shared originals and its own account image directory.
+Other accounts' images, credentials, notes, request metadata, and unrelated staged
+changes are not uploaded by this feature. Existing commits containing unrelated
+files or a different identity must be reviewed in Git. Repository hooks are disabled
+for app-triggered Git commands, and sync never force-pushes.
+
+Concurrent edits are not merged by the app. Git ignores personal photo formats in
+the app repository; reusable artwork and intentionally published preview screenshots
+are exceptions.
+
+## Clothing care and reminders
+
+Open **Clothing care** for due items, the cleaning queue, and individual schedules.
+**Care settings** is also available from a clothing item's detail dialog. Save its
+care method, garment-label instructions, confirmation that you checked the label,
+wear-count limit, calendar interval in months, existing wear count, and last-cleaned
+date. Zero disables either interval; reminders can also be paused per piece.
+
+The starting wear intervals draw on [Whirlpool's frequency guide](https://www.whirlpool.com/blog/washers-and-dryers/how-often-should-you-wash-your-clothes.html).
+The jacket calendar reminder is an optional app preference, not a universal
+dry-cleaning requirement. Method and temperature remain subject to the garment's
+label; see [sorting and label guidance](https://www.whirlpool.com/blog/washers-and-dryers/how-to-sort-separate-laundry.html)
+and [dry-clean-only guidance](https://www.whirlpool.com/blog/washers-and-dryers/wash-dry-clean-only.html).
+Unknown fabrics and care labels are not inferred from photographs.
+
+**Worn today** records one wear per item per local calendar day. **Mark outfit worn
+today** in Outfit designer logs all selected pieces together. Generating a look or
+planning a week never logs actual wear. Unknown cleaning history stays unknown until
+you record it; calendar tracking starts with a logged wear or a saved tracking date.
+Calendar reminders use whole months and clamp month-end dates appropriately.
+
+**Send to cleaning** uses the existing laundry availability state, so those items
+are excluded from new outfit suggestions. **Cleaned today / Dry cleaned today** resets
+wear counts and restores pieces that were in cleaning to ready. The most recent care
+change can be undone during the session without overwriting unrelated item edits.
+Care records are account-specific and included in wardrobe backups, not image sync.
+Due reminders appear in the app; this version does not send background, email, or
+operating-system notifications when the app is closed.
 
 ## Accounts and the test wardrobe
 
