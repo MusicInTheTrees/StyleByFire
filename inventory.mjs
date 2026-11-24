@@ -17,6 +17,11 @@ export function inferLabels(relative){
  else if(['jackets','outerwear'].includes(root)){labels.role='outerwear';labels.subcategory=['Outerwear',...rest].join(' / ');labels.modes=['Casual','Business'];}
  else if(['dresses','dress'].includes(root)){labels.role='dress';labels.subcategory=['Dresses',...rest].join(' / ');}
  else if(['shirts','tops','top','blouses'].includes(root)){labels.modes=['Casual','Business'];}
+ // The optional on-disk scaffold uses the same six category roots as the app.
+ if(['top','tops','bottom','bottoms'].includes(root))labels.subcategory=rest.join(' / ');
+ if(['top','tops'].includes(root)&&/^dresses$/i.test(rest[0]||''))labels.role='dress';
+ if(['top','tops'].includes(root)&&/^outerwear$/i.test(rest[0]||''))labels.role='outerwear';
+ if(['bottom','bottoms'].includes(root)&&/^leggings$/i.test(rest[0]||''))labels.role='leggings';
  if(/athletic|activewear|sportswear|running/i.test(relative)){labels.modes=['Sport','Casual'];labels.formality=1;}
  if(labels.category==='Bottom'&&/^(pants|bottoms?)$/i.test(root)&&rest.some(s=>/^heavy ?duty$|^work$/i.test(s))){labels.subcategory='Pants / Work / Utility';labels.modes=['Work','Casual'];labels.formality=1;}
  if(labels.category==='Bottom'&&rest.some(s=>/^sport$/i.test(s))){labels.subcategory='Pants / Sport / Relaxed trousers';labels.modes=['Casual','Sport'];labels.formality=2;}
@@ -24,7 +29,7 @@ export function inferLabels(relative){
 }
 export async function refreshInventory({root,data,state,seed}){
  const next=structuredClone(state);const known=new Set([...(next.inventoryPaths||[]),...next.items.map(i=>i.sourcePath||seed.media[i.src.slice(7)]).filter(Boolean)]);let added=0;const skipped=[];
- async function walk(dir){const results=[];for(const entry of await readdir(dir,{withFileTypes:true})){if(entry.isSymbolicLink())continue;const full=path.join(dir,entry.name);if(entry.isDirectory())results.push(...await walk(full));else if(entry.isFile())results.push(full);}return results;}
+ async function walk(dir){const results=[];for(const entry of await readdir(dir,{withFileTypes:true})){if(entry.isSymbolicLink()||entry.name.startsWith('.'))continue;const full=path.join(dir,entry.name);if(entry.isDirectory())results.push(...await walk(full));else if(entry.isFile())results.push(full);}return results;}
  for(const file of await walk(path.join(root,'ClothingImages'))){
   const relative=path.relative(root,file).split(path.sep).join('/');if(known.has(relative)||relative.toLowerCase().includes('/imagebackgrounds/'))continue;
   const ext=path.extname(file).toLowerCase();if(!['.jpg','.jpeg','.png','.webp'].includes(ext)){skipped.push(path.basename(file));continue;}

@@ -62,14 +62,14 @@ test('account preview limits allow reopening existing requests but reject new on
  assert.equal((await listPreviews(f.userFolder)).length,100);
 });
 
-async function serverFixture(t,{fakeProvider=false}={}){
+async function serverFixture(t,{fakeProvider=false,external=false}={}){
  let child;const dir=await temporary(t,async()=>{if(child&&child.exitCode===null){const exited=once(child,'exit');child.kill();await exited;}}),project=path.join(dir,'project'),data=path.join(dir,'data');await mkdir(path.join(project,'app'),{recursive:true});
- for(const name of ['server.mjs','accounts.mjs','demo.mjs','demo-catalog.mjs','web-import.mjs','inventory.mjs','mannequin-store.mjs'])await copyFile(path.join(root,name),path.join(project,name));
+ for(const name of ['server.mjs','image-library.mjs','accounts.mjs','demo.mjs','demo-catalog.mjs','web-import.mjs','inventory.mjs','mannequin-store.mjs'])await copyFile(path.join(root,name),path.join(project,name));
  if(fakeProvider)await writeFile(path.join(project,'mannequin-providers.mjs'),`let calls=0;export async function providerStatus(){return {providers:[{id:'openai',ready:true,configured:true,label:'Synthetic provider'}],calls};}export async function generatePreview({provider}){calls++;if(provider==='local')throw Object.assign(Error('Synthetic provider unavailable'),{status:503});await new Promise(resolve=>setTimeout(resolve,100));return {bytes:Buffer.from('${png.toString('base64')}','base64'),mime:'image/png',provider};}`);
  else await copyFile(path.join(root,'mannequin-providers.mjs'),path.join(project,'mannequin-providers.mjs'));
  for(const name of ['domain.js','work.js','golf.js','mannequin.js','weekly-settings.js'])await copyFile(path.join(root,'app',name),path.join(project,'app',name));
  await writeFile(path.join(project,'package.json'),'{"type":"module"}');
- const port=4191,url=`http://127.0.0.1:${port}`;child=spawn(process.execPath,['server.mjs'],{cwd:project,env:{...process.env,PORT:String(port),STYLEBYFIRE_DATA_DIR:data},stdio:['ignore','pipe','pipe'],windowsHide:true});
+ const port=4191,url=`http://127.0.0.1:${port}`;child=spawn(process.execPath,['server.mjs'],{cwd:project,env:{...process.env,PORT:String(port),STYLEBYFIRE_DATA_DIR:data,STYLEBYFIRE_IMAGE_DIR:external?path.join(dir,'library'):''},stdio:['ignore','pipe','pipe'],windowsHide:true});
  let output='';child.stderr.on('data',chunk=>output+=chunk);await new Promise((resolve,reject)=>{const timer=setTimeout(()=>reject(Error('Test server did not start. '+output)),10000);child.stdout.on('data',chunk=>{if(chunk.toString().includes('is ready')){clearTimeout(timer);resolve();}});child.on('exit',()=>{clearTimeout(timer);reject(Error(output));});child.on('error',error=>{clearTimeout(timer);reject(error);});});
  const request=(route,{identity,method='GET',json,body,headers={}}={})=>fetch(url+route,{method,headers:{...(identity?{Cookie:identity.cookie,'X-StyleByFire-Account':identity.user.id}:{}),...(json?{'Content-Type':'application/json'}:{}),...headers},body:json?JSON.stringify(json):body});
  const register=async username=>{const response=await request('/api/auth/register',{method:'POST',json:{displayName:username,username,password:'synthetic-test-password'}});assert.equal(response.status,201,await response.clone().text());return {...await response.json(),cookie:response.headers.get('set-cookie').split(';')[0]};};
@@ -77,7 +77,7 @@ async function serverFixture(t,{fakeProvider=false}={}){
 }
 
 test('mannequin HTTP routes authenticate snapshots and images and survive wardrobe edits',async t=>{
- const {request,register,dir}=await serverFixture(t),owner=await register('preview.owner'),other=await register('preview.other');
+ const {request,register,dir}=await serverFixture(t,{external:true}),owner=await register('preview.owner'),other=await register('preview.other');
  assert.equal((await request('/api/mannequin')).status,401);assert.equal((await request('/api/mannequin',{headers:{Cookie:owner.cookie}})).status,409);
  assert.equal((await request('/api/mannequin',{identity:other,headers:{'X-StyleByFire-Account':owner.user.id}})).status,409);
  const uploaded=await (await request('/api/images',{identity:owner,method:'POST',body:png})).json(),state=wardrobe();for(const item of state.items)item.src=uploaded.src;
@@ -103,7 +103,7 @@ test('mannequin HTTP routes authenticate snapshots and images and survive wardro
 });
 
 test('generation reuses concurrent calls, unlocks failed jobs for retry and saves only completed images',async t=>{
- const {request,register}=await serverFixture(t,{fakeProvider:true}),owner=await register('generation.owner'),other=await register('generation.other');
+ const {request,register}=await serverFixture(t,{fakeProvider:true,external:true}),owner=await register('generation.owner'),other=await register('generation.other');
  const uploaded=await (await request('/api/images',{identity:owner,method:'POST',body:png})).json(),state=wardrobe();for(const item of state.items)item.src=uploaded.src;
  assert.equal((await request('/api/state',{identity:owner,method:'PUT',json:state})).status,200);
  const preview=await (await request('/api/mannequin',{identity:owner,method:'POST',json:{itemIds:['shirt','pants']}})).json(),detail='/api/mannequin/'+preview.id,route=detail+'/generate';

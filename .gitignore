@@ -8,6 +8,28 @@ ClothingImages/
 app/thumbs/
 seed.json
 .env
+stylebyfire.local.json
+stylebyfire.local.json.tmp
+# Personal photographs and mannequin renders must stay out of application commits.
+*.[jJ][pP][gG]
+*.[jJ][pP][eE][gG]
+*.[pP][nN][gG]
+*.[wW][eE][bB][pP]
+*.[hH][eE][iI][cC]
+*.[hH][eE][iI][fF]
+*.[aA][vV][iI][fF]
+*.[gG][iI][fF]
+*.[bB][mM][pP]
+*.[tT][iI][fF]
+*.[tT][iI][fF][fF]
+# Reusable application artwork and intentionally published preview screenshots.
+!app/ambient-*.png
+!app/sidebar-pinstripe.png
+!app/brand-*.png
+!app/favicon-32.png
+!app/apple-touch-icon.png
+!assets/branding/*.png
+!preview/**/*.png
 .env.*
 !.env.example
 __pycache__/

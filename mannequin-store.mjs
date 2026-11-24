@@ -32,7 +32,7 @@ export async function getPreview(userFolder,id){
  const record=await readRecord(userFolder,id);
  return {...summary(record),spec:record.spec,prompt:record.prompt,references:record.spec.items.map((item,n)=>({...item,originalSrc:item.src,src:`/api/mannequin/${id}/references/${n}`}))};
 }
-export async function createPreview({userFolder,state,itemIds,mode,bodyShape,pose,resolveSource}){
+export async function createPreview({userFolder,imageFolder=userFolder,state,itemIds,mode,bodyShape,pose,resolveSource}){
  const spec=buildPreviewSpec(state,itemIds,{mode,bodyShape,pose});
  const refs=[];let total=0;
  for(const item of spec.items){
@@ -45,25 +45,27 @@ export async function createPreview({userFolder,state,itemIds,mode,bodyShape,pos
  if(matching)return {...await getPreview(userFolder,matching.id),reused:true};
  if(existing.length>=100)throw failure('This account has reached the limit of 100 mannequin previews. Reopen an existing preview.');
  const id=randomUUID(),target=folder(userFolder,id);await mkdir(target,{recursive:true});
+ const imageTarget=folder(imageFolder,id);await mkdir(imageTarget,{recursive:true});
  const references=[];
- for(let n=0;n<refs.length;n++){const ref=refs[n],file=`reference-${n}.${ref.extension}`;await writeFile(path.join(target,file),ref.bytes,{flag:'wx'});references.push({file,sha256:ref.sha256,mime:imageTypes[ref.extension]});}
+ for(let n=0;n<refs.length;n++){const ref=refs[n],file=`reference-${n}.${ref.extension}`;await writeFile(path.join(imageTarget,file),ref.bytes,{flag:'wx'});references.push({file,sha256:ref.sha256,mime:imageTypes[ref.extension]});}
  const record={version:1,id,key,status:'prepared',createdAt:new Date().toISOString(),spec,prompt:buildMannequinPrompt(spec),references};
  await atomicJSON(path.join(target,'request.json'),record);
  return {...await getPreview(userFolder,id),reused:false};
 }
-export async function completePreview(userFolder,id,bytes,mime){
+export async function completePreview(userFolder,id,bytes,mime,{imageFolder=userFolder}={}){
  const extension=previewImageType(bytes),actualMime=imageTypes[extension];if(mime&&mime!==actualMime)throw failure('The image type does not match its contents.',415);
  const record=await readRecord(userFolder,id),target=folder(userFolder,id);
  const versions=record.results||[];if(versions.length>=10)throw failure('This preview already has 10 saved image versions.');
- const file=`result-${randomUUID()}.${extension}`;await writeFile(path.join(target,file),bytes,{flag:'wx'});
+ const imageTarget=folder(imageFolder,id);await mkdir(imageTarget,{recursive:true});
+ const file=`result-${randomUUID()}.${extension}`;await writeFile(path.join(imageTarget,file),bytes,{flag:'wx'});
  const result={file,mime:actualMime,sha256:digest(bytes),createdAt:new Date().toISOString()};
  record.results=[...versions,result];record.result=result;record.status='complete';record.completedAt=result.createdAt;
  await atomicJSON(path.join(target,'request.json'),record);return getPreview(userFolder,id);
 }
-export async function previewImage(userFolder,id,referenceIndex){
+export async function previewImage(userFolder,id,referenceIndex,{imageFolder=userFolder}={}){
  const record=await readRecord(userFolder,id);let selected;
  if(referenceIndex!==undefined){if(!Number.isInteger(referenceIndex)||referenceIndex<0||referenceIndex>=record.references.length)throw failure('Reference image not found.',404);selected=record.references[referenceIndex];if(!/^reference-\d+\.(png|jpg|webp)$/.test(selected.file))throw failure('Invalid reference file.');}
  else{if(record.status!=='complete'||!record.result)throw failure('This preview has not been generated yet.',404);selected=record.result;if(!/^result-[a-f0-9-]+\.(png|jpg|webp)$/.test(selected.file))throw failure('Invalid preview file.');}
  if(!Object.values(imageTypes).includes(selected.mime))throw failure('Invalid image type.');
- return {bytes:await readFile(path.join(folder(userFolder,id),selected.file)),mime:selected.mime};
+ return {bytes:await readFile(path.join(folder(imageFolder,id),selected.file)),mime:selected.mime};
 }
