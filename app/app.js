@@ -3,6 +3,7 @@ import {defaultWeeklySettings} from './weekly-settings.js';
 import {generateWeeklyPlan,setWeeklyDayLock,changeWeeklySelection,replaceWeeklyDay} from './weekly-planner.js';
 import {weeklyPage,weeklySettingsFromForm} from './weekly-ui.js';
 import {weeklyEditorMarkup,weeklyEditorOptions} from './weekly-editor.js';
+import {createWeeklyPreviews,weeklyMannequinMarkup,weeklyPreviewToolbar} from './weekly-previews.js';
 import {needsReview,prepareBulkEdit,undoBulkEdit} from './wardrobe-tools.js';
 import {openMannequin,closeMannequin} from './mannequin-ui.js';
 import {toggleOutfitPiece,manualOutfit,restoreOutfitDraft} from './outfit-builder.js';
@@ -22,6 +23,13 @@ let buildMethod='stylist',pickerQuery='',autoMannequin=true;
 let weeklyDraft=null,weekEditor=null;
 icons.calendar='<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 11h18M8 15h2M14 15h2M8 18h2"/>';
 const outfitPreview=createOutfitPreview({api,escape,isActive:()=>page==='designer'&&!document.hidden&&!$('#modal').open,onChange:()=>{const host=$('#outfit-preview');if(host)host.innerHTML=outfitPreview.markup(!!outfit?.items.length);}});
+const weeklyPreviews=createWeeklyPreviews({api,isActive:()=>page==='weekly'&&!document.hidden&&!$('#modal').open,onChange:renderWeeklyPreviews});
+const weeklyPreviewMarkup=new WeakMap();
+function renderWeeklyPreviews(){
+ if(page!=='weekly'||!state)return;
+ for(const day of state.weeklyPlanner?.plan?.days||[]){const host=$(`#week-preview-${day.id}`);if(host){const markup=weeklyMannequinMarkup(day,{escape},weeklyPreviews.view(day.id));if(weeklyPreviewMarkup.get(host)!==markup){host.innerHTML=markup;weeklyPreviewMarkup.set(host,markup);}}}
+ const controls=$('#week-preview-controls');if(controls){const expanded=controls.querySelector('details')?.open,markup=weeklyPreviewToolbar(weeklyPreviews.summary(),{escape});if(weeklyPreviewMarkup.get(controls)!==markup){controls.innerHTML=markup;weeklyPreviewMarkup.set(controls,markup);if(expanded&&controls.querySelector('details'))controls.querySelector('details').open=true;}}
+}
 function rememberOutfit(){if(!auth.user||!outfit)return;try{localStorage.setItem('stylebyfire-outfit:'+auth.user.id,JSON.stringify({mode,method:buildMethod,itemIds:outfit.items.map(i=>i.id),locked}));}catch{}}
 function setManualPieces(items){outfit=manualOutfit(items,mode,state);locked=[];}
 function renderPicker(){return state.items.filter(i=>(category==='All'||i.category===category)&&[i.name,i.subcategory,i.color,...i.tags].join(' ').toLowerCase().includes(pickerQuery.toLowerCase())).map(i=>itemCard(i,true)).join('')||'<p class="empty">No pieces match. Try another category or search.</p>';}
@@ -29,7 +37,7 @@ const accountEvents=new BroadcastChannel('stylebyfire-accounts');
 function clearAccountView(message=''){
  weeklyDraft=null;weekEditor=null;
  closeMannequin();
- outfitPreview.reset();buildMethod='stylist';pickerQuery='';autoMannequin=true;
+ outfitPreview.reset();weeklyPreviews.reset();buildMethod='stylist';pickerQuery='';autoMannequin=true;
  selectedItems.clear();reviewFilter='';availabilityFilter='';bulkUndo=null;bulkPreview=null;bulkDraft=null;webImportController?.abort();webImportController=null;busy=false;auth.user=null;state=null;outfit=null;locked=[];editor=null;itemDraft=null;importFiles=[];websiteDraft=null;delete window.pendingRestore;clearPhotoCache();$('#modal').close();authMode='login';renderAuth(message);
  history.replaceState(null,'','#sign-in');
 }
@@ -50,6 +58,7 @@ async function loadAccount(){
  weeklyDraft=null;weekEditor=null;
  clearPhotoCache();state=validateState(await api('/api/state'));page='designer';category='All';query='';subfilter='';colorfilter='';favoritesOnly=false;locked=[];outfit=null;saveFailure=false;saveQueue=Promise.resolve();editor=null;itemDraft=null;delete window.pendingRestore;
  buildMethod='stylist';pickerQuery='';const accountId=auth.user.id;
+ weeklyPreviews.reset(accountId);
  try{autoMannequin=localStorage.getItem('stylebyfire-auto-preview:'+accountId)!=='false';}catch{autoMannequin=true;}
  const previews=await outfitPreview.load(accountId);if(auth.user?.id!==accountId)return;
  let draft;try{draft=restoreOutfitDraft(JSON.parse(localStorage.getItem('stylebyfire-outfit:'+accountId)),state);}catch{}
@@ -75,6 +84,7 @@ function render(){
  $('#app').innerHTML=`<aside class="sidebar"><a class="brand" href="#wardrobe" data-nav="wardrobe" aria-label="StyleByFire home"><img src="/brand-flame.png" alt=""><span>Style<span class="brand-by">by</span>Fire<span class="brand-dot">.</span></span></a><div class="sidebar-label">YOUR STYLE, REIMAGINED</div><nav>${nav.map(([id,ic,label])=>`<button class="nav-item ${page===id?'active':''}" data-nav="${id}">${icon(ic)}<span>${label}</span>${id==='wardrobe'?`<small>${state.items.length}</small>`:''}</button>`).join('')}</nav><div class="sidebar-bottom"><div class="private-label"><span class="status-dot"></span> A little space, just for you.</div><p>Your clothes. Your rules.<br>A fresh perspective, every day.</p><button class="text-button" data-action="backup">${icon('download',15)} Export wardrobe</button><button class="text-button muted" data-action="restore">Restore a backup</button><div class="save-status" id="save-status"></div></div></aside><div class="workspace"><header class="topbar"><span>THE EVERYDAY STYLE STUDIO</span><div><span class="local-badge">${icon('lock',12)} Local & private</span><button class="compact-backup icon-button" data-action="backup" aria-label="Export wardrobe backup">${icon('download',16)}</button><button class="compact-backup icon-button" data-action="restore" aria-label="Restore wardrobe backup">${icon('undo',16)}</button><button class="account-button" data-action="account" aria-label="Account: ${escape(auth.user.displayName)}"><span class="avatar">${escape(auth.user.displayName.slice(0,1))}</span><span>${escape(auth.user.displayName)}${auth.user.isDemo?' <small>DEMO</small>':''}</span></button></div></header><main id="main">${auth.user.isDemo?'<div class="demo-banner"><strong>Jamie Demo · fictional test account</strong><span>Real product photos for testing. Your personal wardrobe is separate.</span></div>':''}${categorySetupBanner()}${pageContent()}</main><footer>Made for the clothes you already love.<span class="footer-signature"><img class="footer-monogram" src="/brand-monogram.png" alt="" width="28" height="28">STYLEBYFIRE · PERSONAL EDITION</span></footer></div>`;
  updateSaveStatus();renderAdjustedImages();rememberOutfit();
  if(page==='designer')void outfitPreview.update(state,outfit?.items||[],mode,{automatic:buildMethod==='manual'&&autoMannequin});else outfitPreview.pause();
+ if(page==='weekly'){void weeklyPreviews.update(state);renderWeeklyPreviews();}else weeklyPreviews.pause();
 }
 function pageContent(){return {wardrobe:wardrobePage,designer:designerPage,weekly:()=>weeklyPage(state,weeklyDraft,{escape,photo,icon}),saved:savedPage,stylist:stylistPage,guidelines:guidelinesPage,studio:studioPage}[page]();}
 
@@ -276,6 +286,7 @@ async function backup(){toast('Preparing a complete wardrobe backup…');await s
 async function prepareRestore(file){if(file.size>250*1024*1024)throw Error('This backup is larger than 250 MB.');const backup=JSON.parse(await file.text());if(backup.format!=='stylebyfire-backup'||backup.version!==1||!backup.assets)throw Error('Please choose a complete StyleByFire backup.');validateState(backup.state);const srcs=new Set([...backup.state.items.map(i=>i.src),backup.state.reference].filter(Boolean));for(const src of srcs)if(typeof backup.assets[src]!=='string'||!/^data:image\/(jpeg|png|webp);base64,[A-Za-z0-9+/=]+$/.test(backup.assets[src]))throw Error('The backup is missing a valid photo.');window.pendingRestore=backup;openModal(`${modalHead('RESTORE WARDROBE','Replace this wardrobe?')}<p>This backup contains ${backup.state.items.length} pieces and ${backup.state.looks.length} looks. It will replace your current wardrobe and preferences. Export your current wardrobe first if you want to keep it.</p><div class="button-row">${button('Export current wardrobe','backup')}${button('Restore this backup','confirm-restore','primary')}</div>`);}
 async function performRestore(){const backup=window.pendingRestore;if(!backup)return;busy=true;$$('#modal button').forEach(b=>b.disabled=true);try{const replacements={};for(const src of new Set([...backup.state.items.map(i=>i.src),backup.state.reference].filter(Boolean))){const data=backup.assets[src];const bytes=Uint8Array.from(atob(data.split(',')[1]),c=>c.charCodeAt(0));const blob=new Blob([bytes],{type:data.match(/^data:([^;]+)/)[1]});await loadPhoto(URL.createObjectURL(blob)).catch(()=>{throw Error('The backup contains a photo that cannot be decoded.');});replacements[src]=(await api('/api/images',{method:'POST',body:blob})).src;}const next=structuredClone(backup.state);for(const i of next.items)i.src=replacements[i.src];if(next.reference)next.reference=replacements[next.reference];await api('/api/state',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(next)});state=next;weeklyDraft=null;weekEditor=null;locked=[];outfit=null;delete window.pendingRestore;$('#modal').close();render();toast('Your wardrobe has been restored.');}finally{busy=false;$$('#modal button').forEach(b=>b.disabled=false);}}
 document.addEventListener('click',async e=>{const el=e.target.closest('button,[data-nav]');if(!el||el.disabled||busy)return;try{
+ if(el.dataset.weekPreview){const day=state.weeklyPlanner?.plan?.days.find(day=>day.id===el.dataset.weekPreview);if(!day)return;const accountId=auth.user.id,savedPreview=weeklyPreviews.selected(day.id);weeklyPreviews.pause();await saveQueue;if(auth.user?.id!==accountId)return;await openMannequin({state,itemIds:day.itemIds,mode:day.mode,api,openModal,modalHead,photo,escape,accountId,savedPreview,contextLabel:day.id[0].toUpperCase()+day.id.slice(1)});return;}
  if(el.dataset.weekLock){await toggleWeeklyDayLock(el.dataset.weekLock);return;}
  if(el.dataset.weekEdit){openWeeklyEditor(el.dataset.weekEdit,el.dataset.weekReplace||null);return;}
  if(el.dataset.weekChange&&weekEditor){const item=state.items.find(item=>item.id===el.dataset.weekChange);weekEditor.replaceId=item.id;weekEditor.category=item.category;weekEditor.query='';renderWeeklyEditor('#week-piece-search',false);return;}
@@ -299,6 +310,9 @@ document.addEventListener('click',async e=>{const el=e.target.closest('button,[d
  if(el.dataset.confirmRemove){const id=el.dataset.confirmRemove;state.items=state.items.filter(i=>i.id!==id);state.looks=state.looks.map(l=>({...l,itemIds:l.itemIds.filter(x=>x!==id)}));if(state.weeklyPlanner?.plan)for(const day of state.weeklyPlanner.plan.days)day.itemIds=day.itemIds.filter(x=>x!==id);locked=locked.filter(x=>x!==id);outfit=null;await persist();$('#modal').close();render();toast('Piece removed. Original photo preserved.');return;}
  if(el.dataset.removeSub){e.preventDefault();const [c,p]=el.dataset.removeSub.split('|');if(state.items.some(i=>i.category===c&&(i.subcategory===p||i.subcategory.startsWith(p+' / '))))return toast('This path contains clothing. Move those pieces before removing it.');state.subcategories=state.subcategories.filter(s=>!(s.category===c&&s.path===p));await persist();openCategories();return;}
  switch(el.dataset.action){
+  case 'prepare-week-previews':await saveQueue;await weeklyPreviews.update(state,{refresh:true});await weeklyPreviews.prepare();break;
+  case 'refresh-week-previews':await weeklyPreviews.update(state,{refresh:true});break;
+  case 'copy-week-request':{const message=weeklyPreviews.requestMessage();if(!message)break;try{await navigator.clipboard.writeText(message);toast('Copied. Send this week’s requests to Codex to create the images.');}catch{$('#week-codex-request')?.focus();$('#week-codex-request')?.select();toast('Select and copy the week’s request, then send it to Codex.');}break;}
   case 'week-save-pieces':await saveWeeklyPieces();break;
   case 'week-stop-swap':if(weekEditor){weekEditor.replaceId=null;renderWeeklyEditor('#week-piece-search');}break;
   case 'neutral-defaults':case 'neutral-none':$$('[name=neutralColors]').forEach(i=>i.checked=el.dataset.action==='neutral-defaults'&&NEUTRAL_COLORS.includes(i.value));break;
@@ -388,6 +402,6 @@ $('#modal').addEventListener('cancel',e=>{if(busy)e.preventDefault();else{editor
 window.addEventListener('beforeunload',e=>{if(busy||saveFailure){e.preventDefault();e.returnValue='';}});
 try{auth=await api('/api/auth');authMode=auth.needsSetup?'register':'login';if(auth.user)await loadAccount();else renderAuth();}catch(e){$('#app').innerHTML=`<div class="loading"><h1>Let’s reconnect.</h1><p>${escape(e.message)}</p><p>Start the local server, then reload this page.</p></div>`;}
 
-$('#modal').addEventListener('close',()=>{if(page==='designer'&&auth.user&&state)void outfitPreview.update(state,outfit?.items||[],mode,{refresh:true,automatic:buildMethod==='manual'&&autoMannequin});});
+$('#modal').addEventListener('close',()=>{if(!auth.user||!state)return;if(page==='designer')void outfitPreview.update(state,outfit?.items||[],mode,{refresh:true,automatic:buildMethod==='manual'&&autoMannequin});if(page==='weekly')void weeklyPreviews.update(state,{refresh:true});});
 
-document.addEventListener('visibilitychange',()=>{if(document.hidden)outfitPreview.pause();else if(page==='designer'&&auth.user&&state)void outfitPreview.update(state,outfit?.items||[],mode,{refresh:true,automatic:buildMethod==='manual'&&autoMannequin});});
+document.addEventListener('visibilitychange',()=>{if(document.hidden){outfitPreview.pause();weeklyPreviews.pause();}else if(auth.user&&state){if(page==='designer')void outfitPreview.update(state,outfit?.items||[],mode,{refresh:true,automatic:buildMethod==='manual'&&autoMannequin});if(page==='weekly')void weeklyPreviews.update(state,{refresh:true});}});

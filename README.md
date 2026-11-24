@@ -50,6 +50,10 @@ The rewear summary lists which days use each repeated piece. Your style playbook
 
 Settings, edits, day locks, and the latest plan belong to the signed-in account, survive restarts, and are included in wardrobe backups. Changing settings keeps the previous plan visible with a reminder to regenerate. Removing a clothing item removes its references from all weekly outfits, including locked days; current item warnings are reassessed when viewing the plan. Limits apply across the entire generated plan, including locked outfits; this is a reusable Monday–Sunday planner, not a dated calendar or wear-history tracker.
 
+Each planned day also has a large **mannequin preview above its clothing pieces**. Saved images appear when they match that day's full selection, mode, photo edits, and styling/color corrections; select the image to enlarge it. Repeated outfits share a preview, and unchanged locked outfits keep their matching image when the week is regenerated. Editing a day clears an outdated image without deleting it from preview history.
+
+Choose **Prepare week previews**, expand the Codex request, then **Copy week request** and send it to Codex. This prepares only missing valid outfits and combines repeated outfits into one request. Preparing references does not generate an image or call a billed API. The planner checks every five seconds while it is visible and shows completed images automatically. **Refresh previews** retries after a connection error. Each day's **Create preview / Preview options** opens the existing mannequin studio for that specific day, with shape choices and the optional configured local/API routes. Days missing a top and bottom or a dress, or containing unavailable pieces, explain what needs editing first. Preview requests/images stay in the account's mannequin history and are not part of wardrobe JSON backups.
+
 ## Build a look
 
 - **Outfit designer:** choose Casual, Sport, Golf, Business, or Red carpet. The selected outfit is the primary workspace, with a large mannequin preview first and individual pieces above the clothing picker. A blue-and-gray interface keeps attention on your clothing's actual colors.
@@ -150,7 +154,7 @@ npm test
 node --check app/app.js
 ```
 
-The automated tests cover outfit rules and accessory combinations, weekly schedules and per-item reuse limits, consecutive repeats and clothing shortages, inventory refresh, custom neutral colors and bulk edits, account isolation, mannequin snapshots and provider contracts, website-import URL and DNS validation, redirect and response-size limits, product metadata, and real-photo demo upgrades and offline use. Provider tests mock image services; they do not require API spending or an installed local model. Integration tests use isolated temporary data directories rather than your saved wardrobe.
+The automated tests cover outfit rules and accessory combinations, weekly schedules and per-item reuse limits, consecutive repeats and clothing shortages, weekly edits and day locks, per-day mannequin matching and shared requests, automatic preview refresh and stale-result handling, inventory refresh, custom neutral colors and bulk edits, account isolation, mannequin snapshots and provider contracts, website-import URL and DNS validation, redirect and response-size limits, product metadata, and real-photo demo upgrades and offline use. Provider tests mock image services; they do not require API spending or an installed local model. Integration tests use isolated temporary data directories rather than your saved wardrobe.
 
 - `PORT` changes the listening port.
 - `STYLEBYFIRE_DATA_DIR` selects a separate data directory for isolated QA.

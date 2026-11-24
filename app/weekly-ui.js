@@ -31,6 +31,7 @@ export function weeklyPage(state,draft,{escape,photo,icon}){
       <header><div><p class="eyebrow">${name}</p><h2>${escape(modeName(day.mode))}</h2>${plan.settings.days.find(d=>d.id===id).mode==='Random'?'<span class="week-random">Random pick</span>':''}</div><span class="week-status ${day.complete?'':'incomplete'}">${day.complete?'Slots filled':'Needs pieces'}</span></header>
       <div class="week-card-actions"><button class="btn secondary" data-week-edit="${id}" aria-label="Edit ${name} pieces">Edit pieces</button><button class="btn ${day.locked?'primary':'secondary'}" data-week-lock="${id}" aria-pressed="${!!day.locked}" aria-label="${day.locked?'Unlock':'Lock'} ${name} outfit">${icon('lock',14)} ${day.locked?'Locked':'Lock day'}</button></div>
       ${day.locked?'<p class="week-lock-note">Kept when you regenerate.</p>':day.edited?'<p class="week-lock-note">Hand-picked · lock to keep during regeneration.</p>':''}
+      <div id="week-preview-${id}"></div>
       <div class="week-collage">${main.map(item=>`<div><button class="week-photo-edit" data-week-edit="${id}" data-week-replace="${escape(item.id)}" aria-label="Change ${escape(item.name)} for ${name}">${photo(item)}</button><span>${escape(item.name)}</span></div>`).join('')||'<p>No suitable pieces for this day.</p>'}</div>
       ${day.missing.length?`<p class="week-missing">Missing: ${escape(day.missing.join(', '))}</p>`:''}
       <details class="week-pieces"><summary>All ${day.items.length} pieces & style notes</summary><ul>${day.items.map(item=>{
@@ -58,6 +59,7 @@ export function weeklyPage(state,draft,{escape,photo,icon}){
       <p class="week-stale" id="weekly-stale" ${stale?'':'hidden'}>Settings have changed. The outfits below still use the saved plan's days and limits. Generate again to apply your changes.</p>
       ${details.completeDays<plan.days.length?'<p class="week-callout">Some days need more clothing. Expand their pieces and notes to see what is missing. Reuse limits stay enforced even when a complete outfit is not possible.</p>':''}
       ${details.reuseWarnings.map(warning=>`<p class="week-callout">${escape(warning)}</p>`).join('')}
+      <section class="week-preview-controls" id="week-preview-controls" aria-label="Weekly mannequin previews"></section>
       <div class="week-outfit-grid">${WEEK_DAYS.map(dayCard).join('')}</div>
       <section class="week-reuse-report"><p class="eyebrow">THE REWEAR PLAN</p><h2>Good pieces, more than once.</h2><p>Each line shows one item and the days it is planned. Limits reset when you generate a new week.</p>${reused.length?`<ul>${reused.map(entry=>`<li>${photo(entry.item)}<div><strong>${escape(entry.item.name)}</strong><span>${escape(weeklyReuseText(entry))}</span></div><b>${entry.days.length} days</b></li>`).join('')}</ul>`:'<p>No pieces repeat in this plan.</p>'}</section>
     </section>`:`<div class="week-empty">${icon('calendar',38)}<h2>A little planning. A lighter morning.</h2><p>Choose your days above, then generate your week. Your outfits and settings stay with this account.</p></div>`}

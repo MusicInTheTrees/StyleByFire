@@ -21,11 +21,11 @@ export function closeMannequin(){
  active=null;
 }
 
-export async function openMannequin({state,itemIds,mode,api,openModal,modalHead,photo,escape,accountId,savedPreview=null}){
+export async function openMannequin({state,itemIds,mode,api,openModal,modalHead,photo,escape,accountId,savedPreview=null,contextLabel=''}){
  closeMannequin();
  const bodyShape=savedPreview?.bodyShape||'straight';
  const initialSpec=buildPreviewSpec(state,itemIds,{mode,bodyShape});
- const s={state,itemIds:[...itemIds],mode,api,openModal,modalHead,photo,escape,accountId,initialSpec,bodyShape,provider:'assisted',providers:fallbackProviders,history:[],selected:null,viewingHistory:false,loading:true,busy:false,error:'',message:'Loading your mannequin studio…',controller:new AbortController(),epoch};
+ const s={state,itemIds:[...itemIds],mode,api,openModal,modalHead,photo,escape,accountId,contextLabel,initialSpec,bodyShape,provider:'assisted',providers:fallbackProviders,history:[],selected:null,viewingHistory:false,loading:true,busy:false,error:'',message:'Loading your mannequin studio…',controller:new AbortController(),epoch};
  active=s;
  render(s);
  s.dialog=document.querySelector('#modal');
@@ -42,7 +42,7 @@ export async function openMannequin({state,itemIds,mode,api,openModal,modalHead,
   if(action==='upload')s.dialog.querySelector('#mannequin-upload').click();
   if(action==='download')void run(s,()=>downloadPNG(s));
   if(action==='history')void run(s,()=>openHistory(s,button.dataset.previewId));
-  if(action==='current'){s.selected=null;s.viewingHistory=false;s.error='';s.message='Showing the outfit you selected in Designer.';render(s);}
+  if(action==='current'){s.selected=null;s.viewingHistory=false;s.error='';s.message='Showing your selected outfit.';render(s);}
  };
  s.onChange=event=>{
   if(event.target.id==='mannequin-shape'){
@@ -175,7 +175,7 @@ function render(s){
  const provider=s.providers.find(p=>p.id===s.provider),references=detail?.references||s.initialSpec.items;
  const title=detail?`${detail.mode} · ${shapeLabels[detail.bodyShape]} mannequin`:`${s.mode} · ${shapeLabels[s.bodyShape]} mannequin`;
  const wasFocused=s.dialog?.contains(document.activeElement)?document.activeElement.id:null;
- const head=s.modalHead('Your outfit, brought together','Mannequin preview').replace('<h2>','<h2 id="mannequin-title">');
+ const head=s.modalHead('Your outfit, brought together',s.contextLabel?`${e(s.contextLabel)} · Mannequin preview`:'Mannequin preview').replace('<h2>','<h2 id="mannequin-title">');
  const generationLabel=s.provider==='assisted'?(detail?'Request prepared':'Prepare with Codex'):s.provider==='local'?(complete?'Generate another locally':'Generate locally'):(complete?'Generate another · billed API':'Generate · billed API');
  const status=s.loading?'Loading your saved previews…':s.message||(s.busy?busyLabel(s):complete?'Saved to your account.':detail?'Request prepared. The image will appear after it is generated and saved.':'Start with the pieces in your current outfit.');
  s.openModal(`${head}
@@ -192,7 +192,7 @@ function render(s){
    </section>
    <aside class="mannequin-controls" aria-label="Preview controls">
     <label for="mannequin-shape">Mannequin shape<select id="mannequin-shape"${disabled}>${BODY_SHAPES.map(shape=>`<option value="${shape}"${shape===s.bodyShape?' selected':''}>${shapeLabels[shape]}</option>`).join('')}</select><small>Front view · proportions for visual comparison.</small></label>
-    ${s.viewingHistory?`<div class="mannequin-snapshot-note">You are viewing a saved outfit. Changing shape starts a new preview of the outfit selected in Designer.<button type="button" class="text-button" data-mannequin-action="current"${disabled}>Return to selected outfit</button></div>`:''}
+    ${s.viewingHistory?`<div class="mannequin-snapshot-note">You are viewing a saved outfit. Changing shape starts a new preview of your selected outfit.<button type="button" class="text-button" data-mannequin-action="current"${disabled}>Return to selected outfit</button></div>`:''}
     <label for="mannequin-provider">How to create it<select id="mannequin-provider"${disabled}>${s.providers.map(p=>`<option value="${e(p.id)}"${p.id===s.provider?' selected':''}${!p.ready?' disabled':''}>${e(providerLabels[p.id]||p.label)}${p.ready?'':' · unavailable'}</option>`).join('')}</select></label>
     <p class="mannequin-provider-note">${s.provider==='assisted'?'Codex creates the image after you paste the prepared request into this chat. Preparing a request saves the references locally.':s.provider==='local'?'Use your configured ComfyUI workflow to generate the image on this computer.':`Generate with ${e(provider?.model||'OpenAI')}. This uses billed API credits.`}</p>
     ${s.provider==='openai'?'<p class="mannequin-privacy">Clicking Generate sends the selected clothing photos and styling corrections to OpenAI. Personal notes are excluded.</p>':'<p class="mannequin-privacy">Personal notes are excluded from every preview request.</p>'}
