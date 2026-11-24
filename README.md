@@ -2,6 +2,59 @@
 
 A local wardrobe and outfit studio built around your clothing photos. Plan a complete look, tune the styling rules, and keep notes about how each piece looks in real life.
 
+## App preview
+
+Screenshots from November 24, 2026, shared by the project owner. They show an example wardrobe; your account starts with your own clothing.
+
+![Wardrobe collection and filters](preview/24_Nov_2026/1.png)
+
+<details>
+<summary>See all 11 screenshots</summary>
+
+**Outfit designer and mannequin preview**
+
+![Outfit designer and mannequin preview](preview/24_Nov_2026/2.png)
+
+**Selected clothing and accessories**
+
+![Selected clothing and accessories](preview/24_Nov_2026/3.png)
+
+**Manual outfit builder and style notes**
+
+![Manual outfit builder and style notes](preview/24_Nov_2026/4.png)
+
+**Saved looks with mannequin previews**
+
+![Saved looks with mannequin previews](preview/24_Nov_2026/5.png)
+
+**Personal stylist preferences**
+
+![Personal stylist preferences](preview/24_Nov_2026/6.png)
+
+**Adjustable style playbook**
+
+![Adjustable style playbook](preview/24_Nov_2026/7.png)
+
+**Photo studio library**
+
+![Photo studio library](preview/24_Nov_2026/8.png)
+
+**Clothing photo color editor**
+
+![Clothing photo color editor](preview/24_Nov_2026/9.png)
+
+**Weekly planner settings**
+
+![Weekly planner settings](preview/24_Nov_2026/10.png)
+
+**Weekly outfits and mannequin requests**
+
+![Weekly outfits and mannequin requests](preview/24_Nov_2026/11.png)
+
+</details>
+
+[Browse the original screenshots](preview/24_Nov_2026/)
+
 ## Run locally
 
 Install **Node.js 22 or newer**, then run:
@@ -20,7 +73,7 @@ On Windows, double-click **Start StyleByFire.cmd** instead. It starts the app in
 
 Create a local account with a display name, username, and password. Usernames use 3–32 letters, numbers, periods, underscores, or hyphens; passwords require at least 8 characters. Each account has its own wardrobe, photographs, saved looks, stylist preferences, and guidelines.
 
-**Jamie Demo** is a clearly fictional person with a separate wardrobe of real product photographs from retailers. Use the demo option on the sign-in screen to try outfit combinations and accessories without changing your personal wardrobe. On first use, the app downloads the demo photographs and caches them locally under `.data/demo-photos/`; later use can reuse those files offline. Source links identify the retailers behind the photographs. A fresh clone includes demo labels and source URLs, not retailer image files or anyone's personal clothing photographs.
+**Jamie Demo** is a clearly fictional person with a separate wardrobe of real product photographs from retailers. Use the demo option on the sign-in screen to try outfit combinations and accessories without changing your personal wardrobe. On first use, the app downloads the demo photographs and caches them locally under `.data/demo-photos/`; later use can reuse those files offline. Source links identify the retailers behind the photographs. A fresh clone includes demo labels and source URLs, not retailer image files or original personal clothing photographs. The README preview gallery contains owner-approved screenshots of an example wardrobe.
 
 When upgrading an existing installation, the **first real account** claims the previous wardrobe, including corrections, notes, favorites, image adjustments, and saved looks. The server leaves `.data/wardrobe.json` untouched, makes an exact backup under `.data/backups/`, and copies the wardrobe and imported photos into the new account. Later accounts start with an empty wardrobe and import their own photos. Trying the demo does not claim the existing wardrobe.
 
@@ -145,7 +198,7 @@ Select pieces using the checkbox on each wardrobe photo, or filter the collectio
 
 Account credentials and hashed session identifiers are stored in `.data/accounts.json`. Each account's wardrobe and imported photos live under `.data/accounts/<account-id>/`. Export a complete JSON backup from the app before moving to another computer or making major changes. It includes the signed-in account's photographs, labels, adjustments, preferences, and saved looks. Restore replaces that account's wardrobe after an explicit confirmation; it does not replace other accounts. A wardrobe backup is not an account-password backup.
 
-Existing installations may also have original photos in `ClothingImages/`, a private catalog in `seed.json`, and small previews in `app/thumbs/`. These files, `.data/`, local QA files, and exported wardrobe backups are excluded from Git. The published repository contains application code, generated background artwork, and demo metadata. Changing a seed catalog does not overwrite an already-saved wardrobe.
+Existing installations may also have original photos in `ClothingImages/`, a private catalog in `seed.json`, and small previews in `app/thumbs/`. These files, `.data/`, local QA files, and exported wardrobe backups are excluded from Git. The published repository contains application code, generated background artwork, demo metadata, and owner-approved preview screenshots. Original wardrobe files, notes databases, and full-resolution clothing imports stay local. Changing a seed catalog does not overwrite an already-saved wardrobe.
 
 The wardrobe uses no analytics or remote fonts and needs no model API. Mannequin generation is optional: the API route sends selected photos and styling corrections to OpenAI, the local route sends them to the configured loopback ComfyUI service, and the assisted route uses the image service available in your Codex chat. ComfyUI keeps its own input/output copies outside the app account boundary; use a trusted local workflow and installation. Website imports and initial demo setup contact the selected retailers to download public pages or photos; retailers receive ordinary web requests. Clicking a source link also opens its external website. Downloaded product photos stay local, and their copyright remains with their respective owners. Attribution is not a license to redistribute them; retailer photos are not committed to this repository.
 
