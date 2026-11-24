@@ -215,11 +215,13 @@ Styling defaults draw on [Emily Post's attire guide](https://emilypost.com/advic
 ## Development
 
 Submit changes through a pull request targeting `main`. All files are owned by
-`@MusicInTheTrees`, whose approval is required before merging. New changes dismiss
-previous approvals, and review conversations must be resolved. The protection also
-applies to administrators; force pushes and deletion of `main` are disabled.
-GitHub does not allow authors to approve their own pull requests, so owner-authored
-pull requests need an explicit owner decision about the review configuration.
+`@MusicInTheTrees`, whose approval is required for collaborators to merge. New
+changes dismiss previous approvals, and review conversations must be resolved.
+Only `@MusicInTheTrees` has a pull-request-only review exception, allowing the owner
+to merge their own changes without self-approval. This exception also lets Max
+explicitly merge another contributor's pull request; nobody else can bypass the
+required approval. Direct pushes, force pushes, and deletion of `main` are blocked,
+including for the owner.
 
 ```sh
 npm test
