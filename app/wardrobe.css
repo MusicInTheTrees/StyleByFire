@@ -1,0 +1,37 @@
+/* Keep wardrobe controls in a shared grid without changing clothing cards. */
+.wardrobe-controls{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);gap:18px;margin-bottom:26px}
+.wardrobe-controls>section{min-width:0;margin:0;padding:22px;border:1px solid #bccde3;border-radius:12px;background:rgba(244,248,254,.96);box-shadow:0 4px 16px #163a6310}
+.wardrobe-controls h2{font:600 17px/1.4 var(--sans);letter-spacing:0}
+.wardrobe-controls .wardrobe-banner{display:grid;grid-template-columns:48px minmax(0,1fr);gap:12px 16px;align-content:center;background:linear-gradient(125deg,#e3edfc,#f4f8ff)}
+.wardrobe-controls .banner-mark{display:grid;width:48px;height:48px;background:#f5f9ff}
+.wardrobe-controls .wardrobe-banner h3{font-size:24px;line-height:1.25}
+.wardrobe-controls .wardrobe-banner p{font-size:14px;margin-top:7px}
+.wardrobe-controls .banner-cta{grid-column:2;justify-self:start;margin:4px 0 0;padding:13px 18px;font-size:14px;gap:16px;background:var(--accent);color:#fff;border:1px solid #1c4787;box-shadow:0 3px 0 #173b70}
+.wardrobe-controls .banner-cta:hover{background:var(--accent-dark);box-shadow:0 4px 10px #173b7040}
+.wardrobe-controls .banner-cta:active{transform:translateY(2px);box-shadow:0 1px 0 #173b70}
+.wardrobe-controls .collection-header{padding:0;margin:0 0 18px;background:none;border:0;flex-wrap:wrap}
+.wardrobe-controls .collection-header h2 span{font-size:13px;color:#536982}
+.wardrobe-controls .category-tabs{display:flex;flex-wrap:wrap;gap:8px;padding:0;margin:0;background:none;border:0;overflow:visible}
+.wardrobe-controls .category-tab{padding:10px 12px;min-height:44px;border:1px solid #bccde3;border-radius:7px;background:#fff;color:#385575;font-size:14px;gap:8px}
+.wardrobe-controls .category-tab:hover{background:#e6effc;border-color:#7297ca}
+.wardrobe-controls .category-tab.selected{background:#2859a5;color:#fff;border-color:#2859a5;box-shadow:0 2px 5px #24497922}
+.wardrobe-controls .category-tab.selected span{background:#ffffff26;color:#fff}
+.wardrobe-controls .filterbar{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;align-content:start;align-items:center}
+.wardrobe-controls .filterbar h2,.wardrobe-controls .search-field{grid-column:1/-1}
+.wardrobe-controls .search-field{width:100%;margin:0;min-width:0}
+.wardrobe-controls .search-field input{height:48px;background:#fff}
+.wardrobe-controls .filterbar select{width:100%;max-width:none;min-height:46px;background:#fff;padding:11px 12px}
+.wardrobe-controls .filter-favorite{width:100%;height:auto;min-height:46px;display:flex;align-items:center;justify-content:center;gap:9px;border:1px solid #aebfd7;border-radius:6px;background:#fff;font-size:14px;font-weight:600;color:#365578}
+.wardrobe-controls .filter-favorite.on{background:#dbe9ff;border-color:#2859a5;color:#204b8d}
+.wardrobe-controls .filter-favorite:hover{background:#e5eefc}
+.wardrobe-controls .bulk-toolbar h2{margin-bottom:14px}
+.wardrobe-controls .bulk-toolbar .button-row{gap:8px}
+.wardrobe-controls #bulk-count{flex-basis:100%;font-size:14px;color:#456080}
+.wardrobe-controls .bulk-toolbar .form-grid{gap:12px;margin-top:18px}
+.wardrobe-controls .bulk-toolbar .field-note{font-size:12px;line-height:1.6;margin:12px 0 0}
+.wardrobe-controls .btn{font-weight:600;white-space:normal;text-align:center}
+.wardrobe-controls .secondary{background:#fff;border-color:#9eb5d3;box-shadow:0 2px 0 #d5e0ef}
+.wardrobe-controls .secondary:hover{background:#e6effc;border-color:#6e94c6}
+@media(max-width:1150px){.wardrobe-controls{grid-template-columns:minmax(0,1fr)}.wardrobe-controls .wardrobe-banner{grid-template-columns:48px minmax(0,1fr) auto}.wardrobe-controls .banner-cta{grid-column:3;grid-row:1;margin:0}.wardrobe-controls #bulk-count{flex-basis:auto}}
+@media(max-width:700px){.wardrobe-controls{gap:14px}.wardrobe-controls>section{padding:18px}.wardrobe-controls .wardrobe-banner{grid-template-columns:minmax(0,1fr)}.wardrobe-controls .banner-mark{display:none}.wardrobe-controls .banner-cta{grid-column:1;grid-row:auto;width:100%;margin-top:6px}.wardrobe-controls .wardrobe-banner h3{font-size:23px}.wardrobe-controls .collection-header{gap:12px}.wardrobe-controls .category-tab{flex:1 0 auto}.wardrobe-controls .bulk-toolbar .form-grid{grid-template-columns:minmax(0,1fr)}.wardrobe-controls #bulk-count{flex-basis:100%}}
+@media(max-width:420px){.wardrobe-controls .filterbar{grid-template-columns:minmax(0,1fr)}.wardrobe-controls .bulk-toolbar .button-row .btn{flex:1 1 auto}}
