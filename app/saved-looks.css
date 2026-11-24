@@ -1,0 +1,7 @@
+/* Keep the original card proportions; the entire mannequin fits inside the cover. */
+.saved-look-media{position:relative}
+.saved-look-preview{position:relative;display:block;width:100%;aspect-ratio:1.1;padding:0;background:#dce5ef;overflow:hidden}
+.saved-look-preview img{width:100%;height:100%;position:absolute;inset:0;object-fit:contain}
+.saved-look-preview:hover{background:#cfdeee}
+.saved-look-preview:focus-visible{outline:3px solid var(--accent);outline-offset:-4px}
+.saved-preview-badge{position:absolute;right:12px;bottom:12px;padding:5px 9px;border:1px solid #c5d4e6;border-radius:5px;background:#f5f8fcf2;color:#294c79;font-size:10px;font-weight:600;pointer-events:none}
