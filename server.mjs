@@ -1,4 +1,5 @@
 import http from 'node:http';
+import {imageLibrary} from './image-library.mjs';
 import {readFile,writeFile} from 'node:fs/promises';
 import path from 'node:path';
 import {fileURLToPath} from 'node:url';
@@ -13,7 +14,8 @@ import {providerStatus,generatePreview} from './mannequin-providers.mjs';
 const root=path.dirname(fileURLToPath(import.meta.url));
 const data=process.env.STYLEBYFIRE_DATA_DIR?path.resolve(process.env.STYLEBYFIRE_DATA_DIR):path.join(root,'.data');
 let seed;try{seed=JSON.parse(await readFile(path.join(root,'seed.json'),'utf8'));}catch(error){if(error.code!=='ENOENT')throw error;seed={items:[],media:{},reference:null};}
-const accounts=new LocalAccounts({data,root,seed});await accounts.initialize();
+const library=await imageLibrary({root,data});await library.initialize();
+const accounts=new LocalAccounts({data,root,seed,library});await accounts.initialize();
 const port=Number(process.env.PORT||4173);
 const mime={'.html':'text/html; charset=utf-8','.js':'text/javascript; charset=utf-8','.css':'text/css; charset=utf-8','.svg':'image/svg+xml','.jpg':'image/jpeg','.png':'image/png','.webp':'image/webp','.json':'application/json','.ico':'image/x-icon'};
 const publicImages=new Set(['/ambient-diamond.png','/ambient-geometric.png','/ambient-lattice.png','/ambient-dots.png','/sidebar-pinstripe.png','/brand-flame.png','/brand-monogram.png','/favicon-32.png','/apple-touch-icon.png']);
@@ -32,9 +34,9 @@ async function generateMannequin(user,id,provider){
   // Read after earlier image writes so a finishing upload cannot bypass the version preflight.
   const accountFolder=accounts.userFolder(user),preview=await queued(()=>getPreview(accountFolder,id));
   if(preview.imageVersions>=10)throw Object.assign(Error('This preview already has 10 saved image versions.'),{status:400});
-  const references=await Promise.all(preview.references.map((_,index)=>previewImage(accountFolder,id,index)));
+  const references=await Promise.all(preview.references.map((_,index)=>previewImage(accountFolder,id,index,{imageFolder:accounts.mediaFolder(user)})));
   const generated=await generatePreview({provider,prompt:preview.prompt,references});
-  return queued(()=>completePreview(accountFolder,id,generated.bytes,generated.mime));
+  return queued(()=>completePreview(accountFolder,id,generated.bytes,generated.mime,{imageFolder:accounts.mediaFolder(user)}));
  })();
  mannequinJobs.set(key,{provider,promise});
  try{return await promise;}finally{mannequinJobs.delete(key);}
@@ -68,17 +70,17 @@ const server=http.createServer(async(req,res)=>{
   if(pathname==='/api/mannequin'&&req.method==='GET')return send(res,200,{previews:await listPreviews(accounts.userFolder(user))});
   if(pathname==='/api/mannequin'&&req.method==='POST'){
    const input=await jsonBody(req);
-   const preview=await queued(async()=>createPreview({userFolder:accounts.userFolder(user),state:await accounts.state(user),itemIds:input?.itemIds,mode:input?.mode,bodyShape:input?.bodyShape,pose:input?.pose,resolveSource:src=>accounts.mediaFile(user,src)}));
+   const preview=await queued(async()=>createPreview({userFolder:accounts.userFolder(user),imageFolder:accounts.mediaFolder(user),state:await accounts.state(user),itemIds:input?.itemIds,mode:input?.mode,bodyShape:input?.bodyShape,pose:input?.pose,resolveSource:src=>accounts.mediaFile(user,src)}));
    return send(res,preview.reused?200:201,preview);
   }
   const mannequinRoute=pathname.match(/^\/api\/mannequin\/([a-f0-9-]+)(?:\/(image|generate|references\/([0-9]+)))?$/);
   if(mannequinRoute){
    const [,id,asset,index]=mannequinRoute,accountFolder=accounts.userFolder(user);
    if(!asset&&req.method==='GET')return send(res,200,await getPreview(accountFolder,id));
-   if(asset&&asset!=='generate'&&['GET','HEAD'].includes(req.method)){const image=await previewImage(accountFolder,id,index===undefined?undefined:Number(index));res.writeHead(200,{'Content-Type':image.mime,'Cache-Control':'no-store','X-Content-Type-Options':'nosniff'});return res.end(req.method==='HEAD'?undefined:image.bytes);}
+   if(asset&&asset!=='generate'&&['GET','HEAD'].includes(req.method)){const image=await previewImage(accountFolder,id,index===undefined?undefined:Number(index),{imageFolder:accounts.mediaFolder(user)});res.writeHead(200,{'Content-Type':image.mime,'Cache-Control':'no-store','X-Content-Type-Options':'nosniff'});return res.end(req.method==='HEAD'?undefined:image.bytes);}
    if(asset==='image'&&req.method==='POST'){
     const bytes=await body(req,20*1024*1024);
-    return send(res,200,await queued(()=>{if(mannequinJobs.has(user.id+':'+id))throw Object.assign(Error('Wait for this preview to finish generating before uploading an image.'),{status:423});return completePreview(accountFolder,id,bytes);}));
+    return send(res,200,await queued(()=>{if(mannequinJobs.has(user.id+':'+id))throw Object.assign(Error('Wait for this preview to finish generating before uploading an image.'),{status:423});return completePreview(accountFolder,id,bytes,undefined,{imageFolder:accounts.mediaFolder(user)});}));
    }
    if(asset==='generate'&&req.method==='POST'){const input=await jsonBody(req);return send(res,200,await generateMannequin(user,id,input?.provider));}
    return send(res,405,{error:'Method not allowed.'});
@@ -87,14 +89,14 @@ const server=http.createServer(async(req,res)=>{
    const input=await jsonBody(req);
    const result=await previewWebsiteImport({url:input?.url,saveImage:async(bytes,extension)=>{
     const filename=randomUUID()+'.'+extension;
-    await queued(()=>writeFile(path.join(accounts.userFolder(user),'images',filename),bytes));
+    await queued(()=>writeFile(path.join(accounts.mediaFolder(user),'images',filename),bytes));
     return '/media/'+filename;
    }});
    return send(res,200,result);
   }
   if(pathname==='/api/inventory/refresh'&&req.method==='POST'){
    if(!user.ownsLegacy)return send(res,403,{error:'Folder refresh belongs to the original wardrobe account. Import photos into this account instead.'});
-   const result=await queued(async()=>{const state=await accounts.state(user);let refreshed;try{refreshed=await refreshInventory({root,data:accounts.userFolder(user),state,seed});}catch(error){if(error.code==='ENOENT')return {state,added:0,skipped:[]};throw error;}validateState(refreshed.state);await accounts.validateSources(user,refreshed.state);await atomicJSON(accounts.stateFile(user),refreshed.state);return refreshed;});return send(res,200,result);
+   const result=await queued(async()=>{const state=await accounts.state(user);let refreshed;try{refreshed=await refreshInventory({root:library.inventoryRoot,data:accounts.mediaFolder(user),state,seed});}catch(error){if(error.code==='ENOENT')return {state,added:0,skipped:[]};throw error;}validateState(refreshed.state);await accounts.validateSources(user,refreshed.state);await atomicJSON(accounts.stateFile(user),refreshed.state);return refreshed;});return send(res,200,result);
   }
   if(pathname==='/api/state'&&req.method==='PUT'){
    const next=validateState(JSON.parse((await body(req,12*1024*1024)).toString()));
@@ -102,7 +104,7 @@ const server=http.createServer(async(req,res)=>{
   }
   if(pathname==='/api/images'&&req.method==='POST'){
    const bytes=await body(req,20*1024*1024),ext=imageType(bytes);if(!ext)return send(res,415,{error:'Please choose a JPEG, PNG, or WebP photo. Convert HEIC photos first.'});
-   const filename=randomUUID()+'.'+ext;await queued(()=>writeFile(path.join(accounts.userFolder(user),'images',filename),bytes));return send(res,201,{src:'/media/'+filename});
+   const filename=randomUUID()+'.'+ext;await queued(()=>writeFile(path.join(accounts.mediaFolder(user),'images',filename),bytes));return send(res,201,{src:'/media/'+filename});
   }
   if(pathname.startsWith('/api/'))return send(res,404,{error:'Endpoint not found.'});
   if(!['GET','HEAD'].includes(req.method))return send(res,405,{error:'Method not allowed.'});
@@ -110,7 +112,7 @@ const server=http.createServer(async(req,res)=>{
   if(privateMedia)file=await accounts.mediaFile(user,pathname);
   else if(privateThumb){
    if(!user.ownsLegacy||!/^\/thumbs\/seed-[a-z0-9_-]+\.(jpg|png|webp)$/i.test(pathname))return send(res,404,{error:'Photo not found.'});
-   file=path.join(root,'app','thumbs',pathname.slice(8));
+   file=path.join(library.thumbs,pathname.slice(8));
   }
   else{
    if(pathname!=='/'&&!publicImages.has(pathname)&&!/^\/[a-z0-9_-]+\.(html|js|css|svg|ico|woff2)$/i.test(pathname))return send(res,404,{error:'File not found.'});

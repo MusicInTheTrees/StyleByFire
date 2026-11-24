@@ -16,12 +16,14 @@ export const emptyWardrobe=()=>({version:1,items:[],looks:[],profile:structuredC
 export async function atomicJSON(file,value){await mkdir(path.dirname(file),{recursive:true});const temporary=file+'.tmp';await writeFile(temporary,JSON.stringify(value,null,2));await rename(temporary,file);}
 
 export class LocalAccounts{
- constructor({data,root,seed}){this.data=data;this.root=root;this.seed=seed;this.registryFile=path.join(data,'accounts.json');this.registry={version:1,users:[],sessions:[]};this.failures=new Map();}
+ constructor({data,root,seed,library}){this.data=data;this.root=root;this.seed=seed;this.library=library;this.registryFile=path.join(data,'accounts.json');this.registry={version:1,users:[],sessions:[]};this.failures=new Map();}
  async initialize(){
   await mkdir(this.data,{recursive:true});
   try{this.registry=JSON.parse(await readFile(this.registryFile,'utf8'));if(this.registry.version!==1||!Array.isArray(this.registry.users)||!Array.isArray(this.registry.sessions))throw Error('Invalid account registry.');}catch(error){if(error.code!=='ENOENT')throw Error('Your local accounts could not be read. No data has been overwritten. '+error.message);}
+  for(const user of this.registry.users)await mkdir(path.join(this.mediaFolder(user),'images'),{recursive:true});
  }
  async saveRegistry(){await atomicJSON(this.registryFile,this.registry);}
+ mediaFolder(user){return this.library?.accountFolder(user)||this.userFolder(user);}
  userFolder(user){return path.join(this.data,'accounts',user.id);}
  stateFile(user){return path.join(this.userFolder(user),'wardrobe.json');}
  publicUser(user){return user?{id:user.id,displayName:user.displayName,username:user.username,isDemo:!!user.isDemo,canRefreshInventory:!!user.ownsLegacy}:null;}
@@ -47,7 +49,7 @@ export class LocalAccounts{
   const salt=randomBytes(16).toString('hex');const passwordHash=(await scrypt(password,salt,64)).toString('hex');
   const user={id:randomUUID(),username,displayName,salt,passwordHash,isDemo:false,ownsLegacy:!this.registry.users.some(u=>!u.isDemo),createdAt:new Date().toISOString()};
   let wardrobe=emptyWardrobe();
-  await mkdir(path.join(this.userFolder(user),'images'),{recursive:true});
+  await mkdir(path.join(this.mediaFolder(user),'images'),{recursive:true});
   if(user.ownsLegacy){
    const legacyFile=path.join(this.data,'wardrobe.json');let legacyBytes;
    try{legacyBytes=await readFile(legacyFile);}catch(error){if(error.code!=='ENOENT')throw error;}
@@ -55,7 +57,7 @@ export class LocalAccounts{
     try{wardrobe=validateState(JSON.parse(legacyBytes.toString()));}catch(error){throw failure('Your existing wardrobe needs repair before account setup. It has not been changed. '+error.message);}
     const backups=path.join(this.data,'backups');await mkdir(backups,{recursive:true});await writeFile(path.join(backups,`before-accounts-${Date.now()}.json`),legacyBytes,{flag:'wx'});
    }else{wardrobe={...wardrobe,items:structuredClone(this.seed.items).map(addGolfSuitability).map(addWorkSuitability),reference:this.seed.reference||null};wardrobe.subcategories=[...new Map([...wardrobe.subcategories,...wardrobe.items.map(i=>({category:i.category,path:i.subcategory}))].map(s=>[s.category+'|'+s.path,s])).values()];}
-   for(const source of new Set([...wardrobe.items.map(i=>i.src),wardrobe.reference].filter(Boolean))){const name=source.slice(7);if(!this.seed.media[name])await copyFile(path.join(this.data,'images',name),path.join(this.userFolder(user),'images',name));}
+   for(const source of new Set([...wardrobe.items.map(i=>i.src),wardrobe.reference].filter(Boolean))){const name=source.slice(7);if(!this.seed.media[name])await copyFile(path.join(this.library?.legacyImages||path.join(this.data,'images'),name),path.join(this.mediaFolder(user),'images',name));}
   }
   validateState(wardrobe);await atomicJSON(this.stateFile(user),wardrobe);this.registry.users.push(user);return this.session(user,res);
  }
@@ -70,10 +72,10 @@ export class LocalAccounts{
  }
  async demo(res){
   let user=this.registry.users.find(u=>u.isDemo);
-  if(!user){user={id:randomUUID(),username:'jamie-demo',displayName:'Jamie Demo',isDemo:true,ownsLegacy:false,createdAt:new Date().toISOString()};await mkdir(path.join(this.userFolder(user),'images'),{recursive:true});const wardrobe=await createDemoWardrobe(this.userFolder(user));validateState(wardrobe);await atomicJSON(this.stateFile(user),wardrobe);this.registry.users.push(user);}
+  if(!user){user={id:randomUUID(),username:'jamie-demo',displayName:'Jamie Demo',isDemo:true,ownsLegacy:false,createdAt:new Date().toISOString()};await mkdir(path.join(this.mediaFolder(user),'images'),{recursive:true});const wardrobe=await createDemoWardrobe(this.mediaFolder(user));validateState(wardrobe);await atomicJSON(this.stateFile(user),wardrobe);this.registry.users.push(user);}
   else{
    const previous=await readFile(this.stateFile(user));const state=validateState(JSON.parse(previous.toString()));
-   const upgraded=await upgradeDemoWardrobe(this.userFolder(user),state);
+   const upgraded=await upgradeDemoWardrobe(this.mediaFolder(user),state);
    if(upgraded.changed){validateState(upgraded.state);const backups=path.join(this.data,'backups');await mkdir(backups,{recursive:true});await writeFile(path.join(backups,`demo-before-product-photos-${Date.now()}.json`),previous,{flag:'wx'});await atomicJSON(this.stateFile(user),upgraded.state);}
   }
   return this.session(user,res);
@@ -83,7 +85,7 @@ export class LocalAccounts{
   if(!/^\/media\/[a-zA-Z0-9_-]+\.(jpg|png|webp)$/.test(source))throw failure('Photo not found.',404);
   const name=source.slice(7);const seeded=this.seed.media[name];
   if(seeded&&!user.ownsLegacy)throw failure('Photo not found.',404);
-  const file=seeded?path.join(this.root,seeded):path.join(this.userFolder(user),'images',name);
+  const file=seeded?path.join(this.library?.inventoryRoot||this.root,seeded):path.join(this.mediaFolder(user),'images',name);
   await stat(file);return file;
  }
  async validateSources(user,state){for(const source of new Set([...state.items.map(i=>i.src),state.reference].filter(Boolean))){try{await this.mediaFile(user,source);}catch{throw failure('A photo is missing from this account. Import the photo or restore a complete backup.');}}}

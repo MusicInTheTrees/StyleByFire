@@ -69,6 +69,65 @@ Open **http://127.0.0.1:4173**. There are no npm packages to install and no buil
 
 On Windows, double-click **Start StyleByFire.cmd** instead. It starts the app in the background and opens Brave when installed, or your default browser otherwise. **Stop StyleByFire.cmd** stops the server without deleting saved data. The launcher handles an outdated desktop PATH and records startup details in `.data/launcher.log` and `.data/server.log`.
 
+## Optional separate image library
+
+You can keep personal photos in a sibling folder, a private Git repository, or a
+locally synced cloud folder. No particular username, drive letter, or Git provider
+is required. The app reads and writes local files; Git uploads and downloads are
+explicit operations, not automatic background sync.
+
+With the app stopped, clone your own image repository beside the application (or
+create any folder outside the app), then run from the application directory:
+
+```sh
+node scripts/image-library.mjs "../My-Clothing-Images" --move
+```
+
+This creates the starter category folder tree and copies clothing originals,
+background reference photos, thumbnails, personal uploads, and every saved
+mannequin reference/result image. It checks SHA-256 hashes before removing source
+copies and refuses to overwrite different destination files. Omit `--move` to keep
+the original copies while you check the result. Stop the app and rerun with
+`--move` to finish cleanup. A migration record is kept privately under `.data/`.
+
+The command saves an ignored `stylebyfire.local.json` containing a relative
+`imageLibrary` path. Start the app normally, including through the Windows shortcut.
+For a fresh installation with no images to migrate, copy
+`stylebyfire.local.example.json` to `stylebyfire.local.json` and edit the path instead.
+`STYLEBYFIRE_IMAGE_DIR` can override that path for one launch; unset it when using
+the migration command. Paths are resolved relative to the application directory.
+
+The external folder contains:
+
+```text
+ClothingImages/Cap, Top, Bottom, Socks, Shoes, Accessories/...
+thumbs/                       # existing small clothing previews
+accounts/<account-id>/images/  # new personal uploads and website imports
+accounts/<account-id>/mannequin/<request-id>/  # references and all result versions
+legacy/images/                # pre-account imports retained for compatibility
+```
+
+Put new original photos under `ClothingImages/` and use **Refresh inventory** in
+the first real account. Existing custom folders are preserved; the scaffold adds
+missing starter folders. Other accounts upload through **Add clothing** and retain
+separate image directories. Existing clothing URLs, corrections, saved outfits,
+and mannequin request IDs continue working. Demo retailer photos stay in local
+`.data/` and are not migrated into the personal image repository.
+
+Credentials, sessions, wardrobe notes, saved looks/weeks, and mannequin request
+metadata remain in `.data/`; `seed.json` also remains local. **The image repository
+alone is not a complete account backup.** To move an existing account to another
+computer, stop the app and copy `.data/`, `seed.json` if present, and the configured
+image folder, keeping the relative layout (or update the local configuration).
+Create a fresh local config when using a different folder name. Do not put account
+data or credentials in the image repository.
+
+Commit and push the image repository separately when you want a cloud copy, and
+pull it on another computer before starting the app. Concurrent edits are not
+merged by the app. Keep a personal image repository private unless you intend to
+publish those photos. Git ignores personal photo formats in the app repository;
+the app's reusable artwork and intentionally published preview gallery are exceptions.
+
 ## Accounts and the test wardrobe
 
 Create a local account with a display name, username, and password. Usernames use 3–32 letters, numbers, periods, underscores, or hyphens; passwords require at least 8 characters. Each account has its own wardrobe, photographs, saved looks, stylist preferences, and guidelines.
@@ -198,7 +257,7 @@ Select pieces using the checkbox on each wardrobe photo, or filter the collectio
 
 Account credentials and hashed session identifiers are stored in `.data/accounts.json`. Each account's wardrobe and imported photos live under `.data/accounts/<account-id>/`. Export a complete JSON backup from the app before moving to another computer or making major changes. It includes the signed-in account's photographs, labels, adjustments, preferences, and saved looks. Restore replaces that account's wardrobe after an explicit confirmation; it does not replace other accounts. A wardrobe backup is not an account-password backup.
 
-Existing installations may also have original photos in `ClothingImages/`, a private catalog in `seed.json`, and small previews in `app/thumbs/`. These files, `.data/`, local QA files, and exported wardrobe backups are excluded from Git. The published repository contains application code, generated background artwork, demo metadata, and owner-approved preview screenshots. Original wardrobe files, notes databases, and full-resolution clothing imports stay local. Changing a seed catalog does not overwrite an already-saved wardrobe.
+Existing installations may also have original photos in `ClothingImages/`, a private catalog in `seed.json`, and small previews in `app/thumbs/`. These files, `.data/`, local QA files, and exported wardrobe backups are excluded from Git. The published repository contains application code, generated background artwork, demo metadata, and owner-approved preview screenshots. Original wardrobe files, notes databases, and full-resolution clothing imports are excluded from the app repository. An optional image-library folder can be synced through your own private Git or cloud service; account databases remain local. Changing a seed catalog does not overwrite an already-saved wardrobe.
 
 The wardrobe uses no analytics or remote fonts and needs no model API. Mannequin generation is optional: the API route sends selected photos and styling corrections to OpenAI, the local route sends them to the configured loopback ComfyUI service, and the assisted route uses the image service available in your Codex chat. ComfyUI keeps its own input/output copies outside the app account boundary; use a trusted local workflow and installation. Website imports and initial demo setup contact the selected retailers to download public pages or photos; retailers receive ordinary web requests. Clicking a source link also opens its external website. Downloaded product photos stay local, and their copyright remains with their respective owners. Attribution is not a license to redistribute them; retailer photos are not committed to this repository.
 

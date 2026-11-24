@@ -18,12 +18,20 @@ test('inventory refresh is additive and idempotent and preserves notes, colors, 
  try{
   await mkdir(path.join(root,'ClothingImages','Accessories','Ties'),{recursive:true});await mkdir(path.join(data,'images'),{recursive:true});
   const png=Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+j2ioAAAAASUVORK5CYII=','base64');
-  const folder=path.join(root,'ClothingImages','Accessories','Ties');await writeFile(path.join(folder,'first.png'),png);
+  const folder=path.join(root,'ClothingImages','Accessories','Ties');await writeFile(path.join(folder,'first.png'),png);await writeFile(path.join(folder,'.gitkeep'),'');
   const seed={items:[],media:{}};const empty={version:1,items:[],looks:[],subcategories:[],reference:'',profile:DEFAULT_PROFILE,rules:DEFAULT_RULES};
-  const first=await refreshInventory({root,data,state:empty,seed});assert.equal(first.added,1);validateState(first.state);
+  const first=await refreshInventory({root,data,state:empty,seed});assert.equal(first.added,1);assert.deepEqual(first.skipped,[]);validateState(first.state);
   Object.assign(first.state.items[0],{notes:'Personal reminder',stylistNotes:'Actually forest green',color:'Green',colorVerified:true,adjustments:{...first.state.items[0].adjustments,rotation:90}});
   await writeFile(path.join(folder,'second.png'),png);const second=await refreshInventory({root,data,state:first.state,seed});assert.equal(second.added,1);assert.deepEqual(second.state.items[0],first.state.items[0]);validateState(second.state);
   assert.equal((await refreshInventory({root,data,state:second.state,seed})).added,0);
   const removed=structuredClone(second.state);removed.items.shift();assert.equal((await refreshInventory({root,data,state:removed,seed})).added,0,'intentionally removed files are not re-added');
  }finally{const resolved=path.resolve(root);assert.ok(resolved.startsWith(path.resolve(tmpdir())+path.sep)&&path.basename(resolved).startsWith('stylebyfire-inventory-'));await rm(resolved,{recursive:true,force:true});}
+});
+
+test('the external library category tree maps subcategories and clothing layers correctly',()=>{
+ assert.equal(inferLabels('ClothingImages/Top/Shirts/T-shirts/photo.jpg').subcategory,'Shirts / T shirts');
+ assert.equal(inferLabels('ClothingImages/Bottom/Pants/Jeans/photo.jpg').subcategory,'Pants / Jeans');
+ assert.equal(inferLabels('ClothingImages/Top/Dresses/Evening/photo.jpg').role,'dress');
+ assert.equal(inferLabels('ClothingImages/Top/Outerwear/Blazers/photo.jpg').role,'outerwear');
+ assert.equal(inferLabels('ClothingImages/Bottom/Leggings/Athletic/photo.jpg').role,'leggings');
 });

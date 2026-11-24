@@ -18,7 +18,7 @@ const fixtureItem=(src,id='fixture')=>({id,name:'Corrected blue shirt',category:
 async function fixture(t,{port,legacy=false}={}){
  const dir=await mkdtemp(path.join(tmpdir(),'stylebyfire-test-')),project=path.join(dir,'project'),data=path.join(dir,'data');
  await mkdir(path.join(project,'app','thumbs'),{recursive:true});await mkdir(path.join(data,'images'),{recursive:true});
- for(const name of ['server.mjs','accounts.mjs','demo.mjs','demo-catalog.mjs','web-import.mjs','inventory.mjs','mannequin-store.mjs','mannequin-providers.mjs'])await copyFile(path.join(root,name),path.join(project,name));
+ for(const name of ['server.mjs','image-library.mjs','accounts.mjs','demo.mjs','demo-catalog.mjs','web-import.mjs','inventory.mjs','mannequin-store.mjs','mannequin-providers.mjs'])await copyFile(path.join(root,name),path.join(project,name));
  await mkdir(path.join(data,'demo-photos'),{recursive:true});for(const entry of DEMO_CATALOG)await writeFile(path.join(data,'demo-photos',demoCacheName(entry)),png);
  await copyFile(path.join(root,'app','work.js'),path.join(project,'app','work.js'));
  await copyFile(path.join(root,'app','domain.js'),path.join(project,'app','domain.js'));
