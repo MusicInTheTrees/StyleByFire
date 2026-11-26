@@ -1,0 +1,37 @@
+// Interface palettes only. Garment colors, photos, and outfit rules never read these values.
+export const DEFAULT_THEME='designer-blue';
+export const THEME_KEY='stylebyfire-theme';
+
+export const THEMES=[
+ {id:'designer-blue',name:'Designer Blue',mood:'Crisp studio blue with a tailored finish',inspiration:'Tailoring and modern golf',pattern:'diamond',palette:{bg:'#C6D5E8',surface:'#F5F9FF',text:'#1B2B42',muted:'#435A76',border:'#AFC3DC',primary:'#2859A5',primaryText:'#FFFFFF',sidebar:'#14263E',sidebarText:'#F5F8FC',sidebarMuted:'#BDCCE0',sidebarActive:'#2B4D77',soft:'#E6EEF9',success:'#246348',warning:'#805006',error:'#9C3030',focus:'#164B9C'}},
+ {id:'midnight-pinstripe',name:'Midnight Pinstripe',mood:'Quiet evening tailoring with fine chalk lines',inspiration:'Formal pinstripe suiting',pattern:'pinstripe',palette:{bg:'#B8C3D1',surface:'#F7F8FA',text:'#1C2938',muted:'#46596D',border:'#AEBCCB',primary:'#304F84',primaryText:'#FFFFFF',sidebar:'#111E30',sidebarText:'#F4F7FB',sidebarMuted:'#B9CAE0',sidebarActive:'#354E72',soft:'#E8EDF3',success:'#225C46',warning:'#79510D',error:'#982F36',focus:'#194F9B'}},
+ {id:'coastal-linen',name:'Coastal Linen',mood:'Airy linen, sea glass, and warm chalk',inspiration:'Summer linen and relaxed sportswear',pattern:'linen',palette:{bg:'#DFE7E2',surface:'#FFFEF8',text:'#203A3B',muted:'#435E60',border:'#B8CFCB',primary:'#176173',primaryText:'#FFFFFF',sidebar:'#1D4850',sidebarText:'#F6FCF9',sidebarMuted:'#C7DFDB',sidebarActive:'#286573',soft:'#EAF4EF',success:'#226347',warning:'#7C530C',error:'#9A3434',focus:'#075C72'}},
+ {id:'charcoal-herringbone',name:'Charcoal Herringbone',mood:'Architectural wool and graphite restraint',inspiration:'Micro-herringbone tailoring',pattern:'herringbone',palette:{bg:'#CED0D0',surface:'#FAFAF8',text:'#252A2D',muted:'#4F585C',border:'#B8BEC0',primary:'#3E505B',primaryText:'#FFFFFF',sidebar:'#252B30',sidebarText:'#FAFAF8',sidebarMuted:'#CFD6D8',sidebarActive:'#45525B',soft:'#ECEEED',success:'#2A6149',warning:'#78500B',error:'#963635',focus:'#245C7A'}},
+ {id:'emerald-evening',name:'Emerald Evening',mood:'Deep velvet, soft ivory, and restrained brass',inspiration:'Emerald velvet eveningwear',pattern:'fan',palette:{bg:'#AFC8BE',surface:'#FCFAF4',text:'#1F3530',muted:'#435F56',border:'#B3C9BF',primary:'#17624C',primaryText:'#FFFFFF',sidebar:'#153B34',sidebarText:'#F8FBF4',sidebarMuted:'#C4DFD0',sidebarActive:'#286150',soft:'#E8F2EA',success:'#256449',warning:'#7C520B',error:'#993B3A',focus:'#096449'}},
+ {id:'earth-knit',name:'Earth Knit',mood:'Warm wool, clay, oat, and cocoa',inspiration:'Cashmere and textured knitwear',pattern:'knit',palette:{bg:'#E4D8C6',surface:'#FFFCF5',text:'#352C28',muted:'#615249',border:'#CDBCA8',primary:'#815035',primaryText:'#FFFFFF',sidebar:'#47342C',sidebarText:'#FFF9EF',sidebarMuted:'#E1CCB7',sidebarActive:'#745342',soft:'#F5EBDE',success:'#336244',warning:'#79500A',error:'#9C3A36',focus:'#84501E'}}
+];
+
+export const themeById=id=>THEMES.find(theme=>theme.id===id)||THEMES[0];
+export function savedTheme(storage=globalThis.localStorage){try{return themeById(storage.getItem(THEME_KEY)).id;}catch{return DEFAULT_THEME;}}
+function alpha(hex,opacity){return `${hex}${opacity}`;}
+export function themePatterns(theme){
+ const p=theme.palette,light=alpha(p.surface.slice(0,7),'24'),dark=alpha(p.sidebar.slice(0,7),'16'),line=alpha(p.primary.slice(0,7),'14');
+ switch(theme.pattern){
+  case 'pinstripe':return {main:[`repeating-linear-gradient(90deg,transparent 0 23px,${line} 23px 24px),linear-gradient(135deg,${p.bg},${p.soft})`,`repeating-linear-gradient(90deg,transparent 0 36px,${line} 36px 37px),linear-gradient(155deg,${p.soft},${p.bg})`],sidebar:`repeating-linear-gradient(90deg,transparent 0 18px,${light} 18px 19px),linear-gradient(${dark},${dark})`};
+  case 'linen':return {main:[`repeating-linear-gradient(0deg,transparent 0 7px,${line} 7px 8px),repeating-linear-gradient(90deg,transparent 0 11px,${light} 11px 12px),linear-gradient(130deg,${p.bg},${p.soft})`,`repeating-linear-gradient(90deg,transparent 0 8px,${line} 8px 9px),repeating-linear-gradient(0deg,transparent 0 13px,${light} 13px 14px),linear-gradient(130deg,${p.soft},${p.bg})`],sidebar:`repeating-linear-gradient(0deg,transparent 0 9px,${light} 9px 10px),repeating-linear-gradient(90deg,transparent 0 13px,${light} 13px 14px)`};
+  case 'herringbone':return {main:[`repeating-linear-gradient(45deg,transparent 0 15px,${line} 15px 16px,transparent 16px 31px),repeating-linear-gradient(135deg,transparent 0 15px,${light} 15px 16px,transparent 16px 31px),linear-gradient(${p.bg},${p.soft})`,`repeating-linear-gradient(135deg,transparent 0 19px,${line} 19px 20px,transparent 20px 39px),repeating-linear-gradient(45deg,transparent 0 19px,${light} 19px 20px,transparent 20px 39px),linear-gradient(${p.soft},${p.bg})`],sidebar:`repeating-linear-gradient(45deg,transparent 0 15px,${light} 15px 16px,transparent 16px 31px),repeating-linear-gradient(135deg,transparent 0 15px,${light} 15px 16px,transparent 16px 31px)`};
+  case 'fan':return {main:[`radial-gradient(circle at 0 100%,${line} 0 1px,transparent 2px 52px),radial-gradient(circle at 100% 100%,${light} 0 1px,transparent 2px 52px),linear-gradient(130deg,${p.bg},${p.soft})`,`repeating-radial-gradient(circle at 50% 110%,transparent 0 34px,${line} 35px 36px,transparent 37px 70px),linear-gradient(130deg,${p.soft},${p.bg})`],sidebar:`repeating-radial-gradient(circle at 50% 110%,transparent 0 34px,${light} 35px 36px,transparent 37px 70px)`};
+  case 'knit':return {main:[`repeating-radial-gradient(ellipse at 50% 50%,${line} 0 2px,transparent 3px 18px),linear-gradient(130deg,${p.bg},${p.soft})`,`repeating-radial-gradient(ellipse at 50% 50%,${line} 0 3px,transparent 4px 24px),linear-gradient(130deg,${p.soft},${p.bg})`],sidebar:`repeating-radial-gradient(ellipse at 50% 50%,${light} 0 2px,transparent 3px 18px)`};
+  default:return {main:[`repeating-linear-gradient(45deg,transparent 0 29px,${line} 29px 30px),repeating-linear-gradient(135deg,transparent 0 29px,${light} 29px 30px),linear-gradient(130deg,${p.bg},${p.soft})`,`radial-gradient(circle at 12px 12px,${line} 1px,transparent 2px) 0 0/34px 34px,linear-gradient(130deg,${p.soft},${p.bg})`],sidebar:`repeating-linear-gradient(45deg,transparent 0 31px,${light} 31px 32px),repeating-linear-gradient(135deg,transparent 0 31px,${light} 31px 32px)`};
+ }
+}
+export function applyTheme(id,{storage=globalThis.localStorage,persist=true,root=globalThis.document?.documentElement}={}){
+ const theme=themeById(id),p=theme.palette;if(!root)return theme;
+ root.dataset.theme=theme.id;
+ const variables={bg:p.bg,paper:p.surface,ink:p.text,muted:p.muted,line:p.border,accent:p.primary,'accent-dark':p.primary,focus:p.focus,'ui-sidebar':p.sidebar,'ui-sidebar-text':p.sidebarText,'ui-sidebar-muted':p.sidebarMuted,'ui-sidebar-active':p.sidebarActive,'ui-soft':p.soft,'ui-success':p.success,'ui-warning':p.warning,'ui-error':p.error,'ui-primary-text':p.primaryText,'ui-sidebar-pattern':theme.id===DEFAULT_THEME?"linear-gradient(#10243d22,#10243d22),url('/sidebar-pinstripe.png')":themePatterns(theme).sidebar};
+ for(const [key,value] of Object.entries(variables))root.style.setProperty(`--${key}`,value);
+ globalThis.document?.querySelector('meta[name="theme-color"]')?.setAttribute('content',p.bg);
+ if(persist)try{storage.setItem(THEME_KEY,theme.id);}catch{}
+ root.dispatchEvent(new CustomEvent('stylebyfire-themechange',{detail:{theme}}));
+ return theme;
+}
