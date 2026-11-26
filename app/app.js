@@ -238,7 +238,7 @@ function designerPage(){
  const pending=!manual&&outfit&&!outfit.errors.length&&locked.some(id=>!outfit.items.some(i=>i.id===id));
  const canSave=outfit&&outfit.items.length&&!outfit.errors.length&&!pending;
  const editing=savedLookEditing(state,editingLookId,outfit?.items.map(item=>item.id)||[],mode);
- return `<div class="designer-page"><header class="designer-intro"><h1>Your outfit, <em>in focus.</em></h1><p>See the complete look, then make every piece your own.</p></header>
+ return `<div class="designer-page"><header class="designer-intro"><div><h1>Your outfit, <em>in focus.</em></h1><p>Create a fresh outfit, or choose every piece yourself.</p></div><div class="designer-start-actions">${button('New outfit','new-outfit','primary','plus')}${button('Build from scratch','new-manual-outfit','secondary','grid')}</div></header>
  <div class="mode-tabs" role="group" aria-label="Outfit occasion">${MODES.map(m=>`<button data-mode="${m}" class="mode-tab ${mode===m?'selected':''}" aria-pressed="${mode===m}">${m==='Sport'?'Sport / active':m}</button>`).join('')}</div>
  <section class="outfit-workspace" id="outfit-workspace" aria-labelledby="outfit-title" tabindex="-1">
   <div class="outfit-workspace-header"><div><p class="eyebrow">${escape(mode.toUpperCase())} LOOK</p><h2 id="outfit-title">${outfit?.items.length?'Your outfit':'Start your next outfit'}</h2></div></div>
@@ -413,6 +413,15 @@ document.addEventListener('click',async e=>{const el=e.target.closest('button,[d
   case 'copy-outfit-request':{const message=outfitPreview.requestMessage();if(!message)break;try{await navigator.clipboard.writeText(message);toast('Copied. Send it to Codex; the finished image will appear automatically.');}catch{$('#outfit-codex-request')?.focus();$('#outfit-codex-request')?.select();toast('Select and copy the request, then send it to Codex.');}break;}
   case 'refresh-outfit-preview':await outfitPreview.update(state,outfit?.items||[],mode,{refresh:true,automatic:buildMethod==='manual'&&autoMannequin});break;
   case 'build-manually':buildMethod='manual';setManualPieces(outfit?.items||[]);render();scrollToDesignerSection('clothing-picker');$('#picker-search')?.focus({preventScroll:true});break;
+  case 'new-outfit':{
+   editingLookId=null;locked=[];buildMethod='stylist';category='All';pickerQuery='';
+   outfit=generateOutfit(state.items,mode,state.rules[mode],state.profile,[],++seed);
+   page='designer';render();window.scrollTo(0,0);toast('New outfit created. Your saved looks are unchanged.');break;
+  }
+  case 'new-manual-outfit':{
+   editingLookId=null;locked=[];buildMethod='manual';category='All';pickerQuery='';setManualPieces([]);
+   page='designer';render();scrollToDesignerSection('clothing-picker');$('#picker-search')?.focus({preventScroll:true});toast('Choose pieces for your new outfit.');break;
+  }
   case 'clear-outfit':editingLookId=null;setManualPieces([]);render();$('#picker-search')?.focus({preventScroll:true});toast('Outfit cleared. Your wardrobe and saved previews are unchanged.');break;
   case 'go-designer':editingLookId=null;page='designer';category='All';render();break;
   case 'detach-look':editingLookId=null;render();toast('Working as a new look. Save it when you are ready.');break;

@@ -14,6 +14,11 @@
 @media(max-width:1100px){.category-setup-banner{flex-wrap:wrap}.category-setup-banner>.button-row{margin-left:44px}}
 @media(max-width:700px){.category-setup-banner{padding:18px;gap:12px}.category-setup-icon{display:none}.category-setup-banner>.button-row{margin-left:0;flex-wrap:wrap}.category-setup-banner h2{font-size:1rem}.nested-category-tree ul{padding-left:13px;margin-left:4px}.category-setup-preview{padding:0 12px}}
 .designer-page>.mode-tabs{margin-bottom:20px}
+.designer-intro{display:flex;align-items:center;justify-content:space-between;gap:24px}
+.designer-start-actions{display:flex;gap:12px;flex-wrap:wrap;flex-shrink:0}
+.designer-start-actions .btn{min-height:48px;padding:14px 22px;font-size:1rem;font-weight:700}
+.designer-start-actions .primary{background:#2459a8;color:#fff;border:1px solid #174586;box-shadow:0 4px 12px #183f7330}
+@media(max-width:950px){.designer-intro{align-items:flex-start;flex-direction:column}.designer-start-actions{width:100%}.designer-start-actions .btn{flex:1;justify-content:center}}
 .outfit-workspace-header{margin-bottom:22px}
 .outfit-workspace>.outfit-actions{justify-content:flex-end;margin-top:18px}
 .outfit-hero{overflow:hidden;border:1px solid #bdcde1;border-radius:14px;background:#f5f8fc;box-shadow:0 12px 28px #203c6510}
