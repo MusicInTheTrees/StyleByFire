@@ -122,11 +122,56 @@ image folder, keeping the relative layout (or update the local configuration).
 Create a fresh local config when using a different folder name. Do not put account
 data or credentials in the image repository.
 
-Commit and push the image repository separately when you want a cloud copy, and
-pull it on another computer before starting the app. Concurrent edits are not
-merged by the app. Keep a personal image repository private unless you intend to
-publish those photos. Git ignores personal photo formats in the app repository;
-the app's reusable artwork and intentionally published preview gallery are exceptions.
+Use **Sync images to GitHub** in the sidebar or account menu, then **Sync now**, to
+commit and upload new or changed images. The small-screen top bar also has a sync
+button. This is an upload backup: it does not download remote changes or delete
+remote files. Pull the image repository separately on another computer before
+starting the app; if remote history has moved ahead, the app stops and explains how
+to resolve it without overwriting work. A failed push keeps its local commit for a retry.
+
+App sync requires Git and GitHub CLI (`gh auth login`), a private personal GitHub
+repository with an existing remote branch, and the repository owner's GitHub login.
+Set the image repository's local author/committer email to that account's GitHub
+noreply address (`<numeric-id>+<username>@users.noreply.github.com`); identity
+mismatches stop sync. The app never changes global Git configuration. Only the first
+real account can sync the shared originals and its own account image directory.
+Other accounts' images, credentials, notes, request metadata, and unrelated staged
+changes are not uploaded by this feature. Existing commits containing unrelated
+files or a different identity must be reviewed in Git. Repository hooks are disabled
+for app-triggered Git commands, and sync never force-pushes.
+
+Concurrent edits are not merged by the app. Git ignores personal photo formats in
+the app repository; reusable artwork and intentionally published preview screenshots
+are exceptions.
+
+## Clothing care and reminders
+
+Open **Clothing care** for due items, the cleaning queue, and individual schedules.
+**Care settings** is also available from a clothing item's detail dialog. Save its
+care method, garment-label instructions, confirmation that you checked the label,
+wear-count limit, calendar interval in months, existing wear count, and last-cleaned
+date. Zero disables either interval; reminders can also be paused per piece.
+
+The starting wear intervals draw on [Whirlpool's frequency guide](https://www.whirlpool.com/blog/washers-and-dryers/how-often-should-you-wash-your-clothes.html).
+The jacket calendar reminder is an optional app preference, not a universal
+dry-cleaning requirement. Method and temperature remain subject to the garment's
+label; see [sorting and label guidance](https://www.whirlpool.com/blog/washers-and-dryers/how-to-sort-separate-laundry.html)
+and [dry-clean-only guidance](https://www.whirlpool.com/blog/washers-and-dryers/wash-dry-clean-only.html).
+Unknown fabrics and care labels are not inferred from photographs.
+
+**Worn today** records one wear per item per local calendar day. **Mark outfit worn
+today** in Outfit designer logs all selected pieces together. Generating a look or
+planning a week never logs actual wear. Unknown cleaning history stays unknown until
+you record it; calendar tracking starts with a logged wear or a saved tracking date.
+Calendar reminders use whole months and clamp month-end dates appropriately.
+
+**Send to cleaning** uses the existing laundry availability state, so those items
+are excluded from new outfit suggestions. **Cleaned today / Dry cleaned today** resets
+wear counts and restores pieces that were in cleaning to ready. The most recent care
+change can be undone during the session without overwriting unrelated item edits.
+Care records are account-specific and included in wardrobe backups, not image sync.
+Due reminders appear in the app; this version does not send background, email, or
+operating-system notifications when the app is closed.
 
 ## Accounts and the test wardrobe
 
@@ -172,7 +217,8 @@ Choose **Prepare week previews**, expand the Codex request, then **Copy week req
 
 ## Build a look
 
-- **Outfit designer:** choose Casual, Sport, Golf, Business, or Red carpet. The selected outfit is the primary workspace, with a large mannequin preview first and individual pieces above the clothing picker. A blue-and-gray interface keeps attention on your clothing's actual colors.
+- **Outfit designer:** choose Casual, Work, Sport, Golf, Business, or Red carpet. The selected outfit is the primary workspace, with a large mannequin preview first and individual pieces above the clothing picker. A blue-and-gray interface keeps attention on your clothing's actual colors.
+- **Start a new outfit:** the prominent **New outfit** button at the top creates a fresh suggestion for the selected occasion and clears previous pins. **Build from scratch** starts with no pieces and opens the manual picker. Both leave saved looks unchanged and end editing of the previously opened saved look.
 - **Build manually:** choose **Choose pieces** in Outfit designer, or select **Choose every piece** in the builder underneath the outfit. Click a photo to add or remove it immediately. Clothing replaces its occupied slot; a dress replaces the separate top and bottom while keeping leggings and outerwear. Accessories can be combined. Search by name, color, tag, or subcategory, start empty, or explicitly ask for suggestions to fill remaining slots. Manual choices still receive color stories and style notes. The current outfit is remembered in this browser separately for each account; save it to the lookbook for a named combination.
 - **Pin required pieces:** create or remix around the items you want to wear. Conflicting pins and missing essentials are explained. New pins leave the current outfit visible until you remix it.
 - **Combine accessories:** ties, belts, eyewear, earrings, necklaces, brooches, watches, wristbands, rings, wallets, and scarves can appear together. Automatic selection chooses eligible pieces across accessory types instead of stopping after one accessory. Ties include neckties, bow ties, and ascots; automatic selection avoids adding several ties at once. Common labels such as eye wear, earing, wrist bands, and scarfs are recognized. Pin multiple accessories when you want a specific combination.

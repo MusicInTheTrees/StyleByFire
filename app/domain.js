@@ -1,3 +1,4 @@
+import {validateCare} from './care.js';
 import {DEFAULT_WORK_RULES,workCandidate} from './work.js';
 import {DEFAULT_GOLF_RULES,golfCandidate,golfConflicts} from './golf.js';
 import {validateWeeklyPlanner,validateSavedWeeks} from './weekly-settings.js';
@@ -163,6 +164,7 @@ export function validateState(state) {
   if(state.items.length>10000||state.looks.length>10000)throw Error('This wardrobe exceeds the local app limit.');
   const ids=new Set();
   for(const i of state.items) {
+    validateCare(i?.care);
     if(typeof i.id!=='string'||ids.has(i.id)||typeof i.name!=='string'||!i.name.trim()||i.name.length>200||!CATEGORIES.includes(i.category)||!Array.isArray(i.tags)||!i.tags.every(t=>typeof t==='string')||!Array.isArray(i.modes)||!i.modes.every(m=>MODES.includes(m))||!PALETTE[i.color]||typeof i.subcategory!=='string'||!['base','outerwear','dress','leggings'].includes(i.role)||typeof i.pattern!=='string'||!Number.isFinite(i.formality)||i.formality<1||i.formality>5||!Number.isFinite(i.warmth)||i.warmth<0||i.warmth>2||typeof i.favorite!=='boolean'||typeof i.colorVerified!=='boolean'||!validSource(i.src))throw Error('A clothing item contains invalid fields.');
     if((i.role==='dress'||i.role==='outerwear')&&i.category!=='Top'||i.role==='leggings'&&i.category!=='Bottom')throw Error('A clothing layer is assigned to an incompatible category.');
     if(i.availability!==undefined&&(typeof i.availability!=='string'||!Object.hasOwn(AVAILABILITY,i.availability)))throw Error('Invalid clothing availability.');

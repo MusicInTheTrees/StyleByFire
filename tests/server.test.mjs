@@ -18,8 +18,9 @@ const fixtureItem=(src,id='fixture')=>({id,name:'Corrected blue shirt',category:
 async function fixture(t,{port,legacy=false}={}){
  const dir=await mkdtemp(path.join(tmpdir(),'stylebyfire-test-')),project=path.join(dir,'project'),data=path.join(dir,'data');
  await mkdir(path.join(project,'app','thumbs'),{recursive:true});await mkdir(path.join(data,'images'),{recursive:true});
- for(const name of ['server.mjs','image-library.mjs','accounts.mjs','demo.mjs','demo-catalog.mjs','web-import.mjs','inventory.mjs','mannequin-store.mjs','mannequin-providers.mjs'])await copyFile(path.join(root,name),path.join(project,name));
+ for(const name of ['server.mjs','image-sync.mjs','image-library.mjs','accounts.mjs','demo.mjs','demo-catalog.mjs','web-import.mjs','inventory.mjs','mannequin-store.mjs','mannequin-providers.mjs'])await copyFile(path.join(root,name),path.join(project,name));
  await mkdir(path.join(data,'demo-photos'),{recursive:true});for(const entry of DEMO_CATALOG)await writeFile(path.join(data,'demo-photos',demoCacheName(entry)),png);
+ await copyFile(path.join(root,'app','care.js'),path.join(project,'app','care.js'));
  await copyFile(path.join(root,'app','work.js'),path.join(project,'app','work.js'));
  await copyFile(path.join(root,'app','domain.js'),path.join(project,'app','domain.js'));
   await copyFile(path.join(root,'app','golf.js'),path.join(project,'app','golf.js'));
@@ -51,7 +52,7 @@ test('accounts preserve legacy corrections, isolate wardrobes and photos, and su
  assert.equal((await request('/private-fixture.png')).status,404);
  assert.deepEqual(await (await request('/api/auth')).json(),{user:null,needsSetup:true});
  assert.equal((await request('/api/web-import/preview',{method:'POST',json:{url:'https://127.0.0.1/private'}})).status,401);
- for(const route of ['/api/state','/media/seed-fixture.png','/thumbs/seed-fixture.png','/THUMBS/seed-fixture.png','/x%2f..%2fthumbs/seed-fixture.png'])assert.equal((await request(route)).status,401,route);
+ for(const route of ['/api/image-sync','/api/state','/media/seed-fixture.png','/thumbs/seed-fixture.png','/THUMBS/seed-fixture.png','/x%2f..%2fthumbs/seed-fixture.png'])assert.equal((await request(route)).status,401,route);
  for(const route of ['/thumbs%5cseed-fixture.png','/thumbs./seed-fixture.png','/thumbs%20/seed-fixture.png'])assert.notEqual((await request(route)).status,200,route);
  assert.equal((await request('/api/auth',{headers:{Origin:'https://external.example'}})).status,403);
  const demo=await authenticate('/api/auth/demo');assert.equal(demo.user.displayName,'Jamie Demo');assert.equal(demo.user.isDemo,true);assert.equal(demo.needsSetup,true);assert.equal(demo.user.canRefreshInventory,false);
@@ -61,11 +62,15 @@ test('accounts preserve legacy corrections, isolate wardrobes and photos, and su
  for(const route of ['/media/seed-fixture.png','/thumbs/seed-fixture.png','/THUMBS/seed-fixture.png','/x%2f..%2fthumbs/seed-fixture.png'])assert.equal((await request(route,{identity:demo})).status,404,route);
  assert.equal((await request('/api/inventory/refresh',{identity:demo,method:'POST'})).status,403);
  const owner=await authenticate('/api/auth/register',{displayName:'Fixture Owner',username:'fixture.owner',password:'test-password-owner'});assert.equal(owner.user.canRefreshInventory,true);assert.equal(owner.needsSetup,false);
+ assert.equal((await request('/api/image-sync',{identity:owner})).status,422);
+ assert.equal((await request('/api/image-sync',{identity:demo,method:'POST'})).status,403);
+ assert.equal((await request('/api/image-sync',{identity:owner,method:'POST',headers:{Origin:'https://external.example'}})).status,403);
  const state=await (await request('/api/state',{identity:owner})).json();assert.equal(state.items.length,2);assert.equal(state.items[0].notes,'Keep this personal note.');assert.equal(state.items[0].color,'Blue');assert.equal(state.items[0].adjustments.rotation,90);assert.equal(state.looks.length,1);
  assert.deepEqual(await readFile(path.join(f.data,'wardrobe.json')),f.legacyBytes);const backups=await readdir(path.join(f.data,'backups'));assert.equal(backups.length,1);assert.deepEqual(await readFile(path.join(f.data,'backups',backups[0])),f.legacyBytes);
  for(const item of state.items){assert.equal((await request(item.src,{identity:owner})).status,200);assert.equal((await request(item.src,{identity:demo})).status,404);}
  assert.equal((await request('/thumbs/seed-fixture.png',{identity:owner})).headers.get('cache-control'),'no-store');
  const other=await authenticate('/api/auth/register',{displayName:'Another Fixture',username:'other.fixture',password:'test-password-other'});const otherState=await (await request('/api/state',{identity:other})).json();assert.equal(otherState.items.length,0);assert.equal(otherState.reference,null);assert.equal(other.user.canRefreshInventory,false);
+ assert.equal((await request('/api/image-sync',{identity:other,method:'POST'})).status,403);
  assert.equal((await request('/api/state',{identity:other,headers:{'X-StyleByFire-Account':owner.user.id}})).status,409);
  assert.equal((await request('/api/web-import/preview',{identity:other,method:'POST',json:{url:'https://127.0.0.1/private'},headers:{'X-StyleByFire-Account':owner.user.id}})).status,409);
  assert.equal((await request('/api/web-import/preview',{identity:other,method:'POST',json:{url:'https://127.0.0.1/private'}})).status,400);

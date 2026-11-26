@@ -1,3 +1,4 @@
+import {createImageSync} from './image-sync.mjs';
 import http from 'node:http';
 import {imageLibrary} from './image-library.mjs';
 import {readFile,writeFile} from 'node:fs/promises';
@@ -16,6 +17,7 @@ const data=process.env.STYLEBYFIRE_DATA_DIR?path.resolve(process.env.STYLEBYFIRE
 let seed;try{seed=JSON.parse(await readFile(path.join(root,'seed.json'),'utf8'));}catch(error){if(error.code!=='ENOENT')throw error;seed={items:[],media:{},reference:null};}
 const library=await imageLibrary({root,data});await library.initialize();
 const accounts=new LocalAccounts({data,root,seed,library});await accounts.initialize();
+const imageSync=createImageSync({directory:library.directory,data,root});
 const port=Number(process.env.PORT||4173);
 const mime={'.html':'text/html; charset=utf-8','.js':'text/javascript; charset=utf-8','.css':'text/css; charset=utf-8','.svg':'image/svg+xml','.jpg':'image/jpeg','.png':'image/png','.webp':'image/webp','.json':'application/json','.ico':'image/x-icon'};
 const publicImages=new Set(['/ambient-diamond.png','/ambient-geometric.png','/ambient-lattice.png','/ambient-dots.png','/sidebar-pinstripe.png','/brand-flame.png','/brand-monogram.png','/favicon-32.png','/apple-touch-icon.png']);
@@ -65,6 +67,8 @@ const server=http.createServer(async(req,res)=>{
    if(!user)return send(res,401,{error:'Sign in to open your wardrobe.'});
    if(pathname.startsWith('/api/')&&!mannequinAsset&&req.headers['x-stylebyfire-account']!==user.id)return send(res,409,{error:'The active account changed in another tab. Reload this page before continuing.'});
   }
+  if(pathname==='/api/image-sync'&&req.method==='GET')return send(res,200,await imageSync.status(user));
+  if(pathname==='/api/image-sync'&&req.method==='POST')return send(res,200,await queued(()=>imageSync.sync(user)));
   if(pathname==='/api/state'&&req.method==='GET')return send(res,200,await accounts.state(user));
   if(pathname==='/api/mannequin/providers'&&req.method==='GET')return send(res,200,await providerStatus());
   if(pathname==='/api/mannequin'&&req.method==='GET')return send(res,200,{previews:await listPreviews(accounts.userFolder(user))});
