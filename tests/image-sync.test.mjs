@@ -55,3 +55,10 @@ test('sync paths and remotes reject credentials, traversal, other accounts and d
 
 test('concurrent sync requests cannot create competing commits',async t=>{const f=await fixture(t);const first=f.sync.sync(user);assert.throws(()=>f.sync.sync(user),/already running/);assert.equal((await first).ok,true);});
 test('sync leaves an unfinished merge for the user to resolve',async t=>{const f=await fixture(t);await writeFile(path.join(f.directory,'.git','MERGE_HEAD'),'ffffffffffffffffffffffffffffffffffffffff\n');await assert.rejects(()=>f.sync.sync(user),/Finish.*merge/);assert.equal(f.pushes(),0);});
+
+test('media sync includes audio and a validated catalog but rejects arbitrary audio metadata',async t=>{
+ const f=await fixture(t);await f.add('Audio/Music/jazz.mp3','ID3 fixture');await f.add('Audio/library.json',JSON.stringify({version:1,tracks:[{id:'jazz',title:'Jazz',pairId:'jazz-pair',mood:'Slow',file:'Music/jazz.mp3'}]}));await f.add('Audio/private.json','private');
+ assert.equal((await f.sync.status(user)).changed,2);assert.equal((await f.sync.sync(user)).ok,true);
+ const files=(await exec('git',['--git-dir',f.remote,'ls-tree','-r','--name-only','main'])).stdout;assert(files.includes('Audio/Music/jazz.mp3'));assert(files.includes('Audio/library.json'));assert(!files.includes('private.json'));
+ await f.add('Audio/library.json',JSON.stringify({version:1,tracks:[],secret:'not a catalog'}));await assert.rejects(()=>f.sync.status(user),/Invalid audio library catalog/);
+});

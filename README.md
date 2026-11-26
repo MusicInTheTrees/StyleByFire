@@ -122,9 +122,10 @@ image folder, keeping the relative layout (or update the local configuration).
 Create a fresh local config when using a different folder name. Do not put account
 data or credentials in the image repository.
 
-Use **Sync images to GitHub** in the sidebar or account menu, then **Sync now**, to
-commit and upload new or changed images. The small-screen top bar also has a sync
-button. This is an upload backup: it does not download remote changes or delete
+Open **Settings** at the bottom of the sidebar (in the top bar on small screens),
+then choose **Media Sync → Sync media to GitHub** and **Sync now** to commit and upload new or
+changed photos, mannequin images, music, and the validated audio catalog. Sync is also available in the account menu. This is an upload backup:
+it does not download remote changes or delete
 remote files. Pull the image repository separately on another computer before
 starting the app; if remote history has moved ahead, the app stops and explains how
 to resolve it without overwriting work. A failed push keeps its local commit for a retry.
@@ -217,6 +218,8 @@ Choose **Prepare week previews**, expand the Codex request, then **Copy week req
 
 ## Build a look
 
+- **Settings and backups:** Settings has separate **Pattern Packs**, **Audio**, **Export & Restore**, **Media Sync**, and **Account** tabs. Pattern Packs contains theme previews and background controls; Audio contains playback and volume controls; the other tabs group backups, media uploads, and account controls. Media Sync appears for the original wardrobe account. Use Left/Right arrows or Home/End to navigate tabs with a keyboard. Save failures remain visible in the sidebar as well as notifications.
+- **Delete a saved look:** large buttons fill each saved card's action row. **Delete look** asks for confirmation and names the selected look; Cancel or closing the dialog leaves it unchanged. Confirming removes only that saved combination, preserving clothing, photos, mannequin history, and saved weeks.
 - **Outfit designer:** choose Casual, Work, Sport, Golf, Business, or Red carpet. The selected outfit is the primary workspace, with a large mannequin preview first and individual pieces above the clothing picker. A blue-and-gray interface keeps attention on your clothing's actual colors.
 - **Start a new outfit:** the prominent **New outfit** button at the top creates a fresh suggestion for the selected occasion and clears previous pins. **Build from scratch** starts with no pieces and opens the manual picker. Both leave saved looks unchanged and end editing of the previously opened saved look.
 - **Build manually:** choose **Choose pieces** in Outfit designer, or select **Choose every piece** in the builder underneath the outfit. Click a photo to add or remove it immediately. Clothing replaces its occupied slot; a dress replaces the separate top and bottom while keeping leggings and outerwear. Accessories can be combined. Search by name, color, tag, or subcategory, start empty, or explicitly ask for suggestions to fill remaining slots. Manual choices still receive color stories and style notes. The current outfit is remembered in this browser separately for each account; save it to the lookbook for a named combination.
@@ -262,11 +265,40 @@ For a local Codex assistant, inspect a request with `node scripts/mannequin.mjs 
 
 The blue-and-silver **tailored flame** is the primary app icon, used in the browser tab, app wordmark, touch icon, and Windows icon file. The **SF monogram** is a secondary mark on the sign-in card and app footer. The approved original images are kept in `assets/branding/`; small browser assets and the multi-resolution Windows icon are exported into `app/`. On Windows, `scripts/build-brand-icons.ps1` rebuilds these exports without changing the original artwork. An existing desktop shortcut can use `app/stylebyfire.ico` as its icon.
 
+## Studio music
+
+A compact player above Settings lets you listen while moving between the wardrobe, designer, and weekly planner. It uses themed Play/Pause, Next, Volume, and three-dot Audio settings buttons, with no song-progress bar. On smaller screens it sits above Settings in the top bar. Autoplay is on by default on sign-in and reload; if the browser blocks it, press **Play**. Disable **Autoplay on sign-in** in Audio settings to start paused. The first-use volume is **15%**. Use the player to pause, skip, adjust volume, or mute, and open **Settings → Audio** for volume, All/Slow/Upbeat playlists, the track list, and **Refresh music library**. Volume, mute, autoplay, playlist, and the last two played tracks are remembered for each account in this browser. Signing out stops playback.
+
+Shuffle plays every track once per round when the selected library allows it. Paired versions have at least **two other tracks between them**, even across rounds, playlist changes, and browser restarts. If a small selection cannot satisfy this spacing, playback stops with an explanation instead of breaking the rule. Changing the playlist affects the next track; it does not interrupt the current song.
+
+Music lives in the configured external media folder, alongside clothing photos:
+
+```text
+StyleByFire-Images/
+  Audio/
+    library.json
+    Music/Contemporary Jazz/
+      Slow/*.mp3
+      Upbeat/*.mp3
+```
+
+The starting collection contains 16 songs and eight pairs, copied from the original song folder. `Audio/library.json` is an explicit catalog, so pairs can span folders and do not depend on identical filenames. To add music, copy files and add catalog entries, then click **Refresh music library**:
+
+```json
+{"version":1,"tracks":[{"id":"evening-cruise","title":"Evening Cruise","pairId":"evening","mood":"Slow","file":"Music/Contemporary Jazz/Slow/Evening Cruise.mp3"}]}
+```
+
+Each track needs a unique `id` and relative `file`; paired versions share a `pairId`. Supported formats are MP3, M4A, OGG, and WAV, subject to browser codec support. The soundtrack is shared by signed-in accounts on this installation; audio routes require authentication. The validated catalog contains only song metadata. **Settings → Media Sync** includes audio files and this catalog in the existing private-repository backup. Account data and wardrobe notes stay excluded. Music is not included in wardrobe JSON exports.
+
+The media repository can have any name: update `imageLibrary` in the ignored `stylebyfire.local.json` when its local folder changes. If its GitHub repository is renamed, update that repository's Git remote too. The app uses the configured folder and remote, not a fixed repository name. Without an external folder, music can live under `.data/Audio/`. Personal audio files are ignored by the application repository.
+
 ## Background patterns
 
 Four generated blue textile backgrounds—diamonds, linked geometry, lattice, and dots—keep the knit texture of the sock patterns that inspired them. The background stays fixed while the page scrolls. A lighter overlay makes the knit texture visible between readable outfit and text panels; a separate navy pinstripe fabric image covers the sidebar. By default, the main background changes every 18 seconds with a 6-second fade.
 
-Open **Background** in the lower-right corner to choose **Slowly fade between patterns**, **Keep one pattern**, or **Solid blue background**. **Next pattern** selects another design. Automatic cycling pauses while the tab is hidden, and a reduced-motion browser preference keeps the background still. The chosen mode and manually selected pattern are saved in this browser's local storage, separately from account wardrobes. The complete image-generation prompts are in [background-prompts.md](docs/background-prompts.md).
+Open **Settings → Pattern Packs → Background display** to choose **Slowly fade between patterns**, **Keep one pattern**, or **Solid theme background**. **Next pattern** selects another design. Automatic cycling pauses while the tab is hidden, and a reduced-motion browser preference keeps the background still. The chosen mode and manually selected pattern are saved in this browser's local storage, separately from account wardrobes. The complete image-generation prompts for the original blue artwork are in [background-prompts.md](docs/background-prompts.md).
+
+Open **Settings → Pattern Packs** to preview six interface themes across wardrobe cards, saved looks, Settings, and the outfit designer. Selecting a pack applies it immediately in this browser; **Restore Designer Blue** returns to the signature palette. The original four blue patterns remain available in Designer Blue, while other packs have two original CSS patterns each. Themes never change clothing photos, saved color labels, mannequin images, or outfit recommendations. See [theme palettes, source references, and texture prompts](docs/theme-packs.md).
 
 ## Manage clothing and photos
 

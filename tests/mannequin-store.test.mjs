@@ -64,7 +64,7 @@ test('account preview limits allow reopening existing requests but reject new on
 
 async function serverFixture(t,{fakeProvider=false,external=false}={}){
  let child;const dir=await temporary(t,async()=>{if(child&&child.exitCode===null){const exited=once(child,'exit');child.kill();await exited;}}),project=path.join(dir,'project'),data=path.join(dir,'data');await mkdir(path.join(project,'app'),{recursive:true});
- for(const name of ['server.mjs','image-sync.mjs','image-library.mjs','accounts.mjs','demo.mjs','demo-catalog.mjs','web-import.mjs','inventory.mjs','mannequin-store.mjs'])await copyFile(path.join(root,name),path.join(project,name));
+ for(const name of ['server.mjs','audio-library.mjs','image-sync.mjs','image-library.mjs','accounts.mjs','demo.mjs','demo-catalog.mjs','web-import.mjs','inventory.mjs','mannequin-store.mjs'])await copyFile(path.join(root,name),path.join(project,name));
  if(fakeProvider)await writeFile(path.join(project,'mannequin-providers.mjs'),`let calls=0;export async function providerStatus(){return {providers:[{id:'openai',ready:true,configured:true,label:'Synthetic provider'}],calls};}export async function generatePreview({provider}){calls++;if(provider==='local')throw Object.assign(Error('Synthetic provider unavailable'),{status:503});await new Promise(resolve=>setTimeout(resolve,100));return {bytes:Buffer.from('${png.toString('base64')}','base64'),mime:'image/png',provider};}`);
  else await copyFile(path.join(root,'mannequin-providers.mjs'),path.join(project,'mannequin-providers.mjs'));
  for(const name of ['domain.js','care.js','work.js','golf.js','mannequin.js','weekly-settings.js'])await copyFile(path.join(root,'app',name),path.join(project,'app',name));

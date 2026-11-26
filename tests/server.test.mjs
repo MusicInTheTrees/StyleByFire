@@ -18,7 +18,7 @@ const fixtureItem=(src,id='fixture')=>({id,name:'Corrected blue shirt',category:
 async function fixture(t,{port,legacy=false}={}){
  const dir=await mkdtemp(path.join(tmpdir(),'stylebyfire-test-')),project=path.join(dir,'project'),data=path.join(dir,'data');
  await mkdir(path.join(project,'app','thumbs'),{recursive:true});await mkdir(path.join(data,'images'),{recursive:true});
- for(const name of ['server.mjs','image-sync.mjs','image-library.mjs','accounts.mjs','demo.mjs','demo-catalog.mjs','web-import.mjs','inventory.mjs','mannequin-store.mjs','mannequin-providers.mjs'])await copyFile(path.join(root,name),path.join(project,name));
+ for(const name of ['server.mjs','audio-library.mjs','image-sync.mjs','image-library.mjs','accounts.mjs','demo.mjs','demo-catalog.mjs','web-import.mjs','inventory.mjs','mannequin-store.mjs','mannequin-providers.mjs'])await copyFile(path.join(root,name),path.join(project,name));
  await mkdir(path.join(data,'demo-photos'),{recursive:true});for(const entry of DEMO_CATALOG)await writeFile(path.join(data,'demo-photos',demoCacheName(entry)),png);
  await copyFile(path.join(root,'app','care.js'),path.join(project,'app','care.js'));
  await copyFile(path.join(root,'app','work.js'),path.join(project,'app','work.js'));
@@ -114,4 +114,20 @@ test('a clean checkout without private seed files can register and use the demo'
  const refreshed=await request('/api/inventory/refresh',{identity:owner,method:'POST'});assert.equal(refreshed.status,200);assert.equal((await refreshed.json()).added,0);
  const demo=await authenticate('/api/auth/demo');const state=await (await request('/api/state',{identity:demo})).json();assert.equal(state.items.length,28);assert.equal((await request(state.items[0].src,{identity:demo})).status,200);assert.equal((await request(state.items[0].src,{identity:owner})).status,404);
  const again=await authenticate('/api/auth/demo');assert.equal(again.user.id,demo.user.id);
+});
+
+test('music catalog and ranged audio require the current account without exposing disk paths',async t=>{
+ const f=await fixture(t,{port:4189});await mkdir(path.join(f.data,'Audio','Music'),{recursive:true});
+ const bytes=Buffer.from('ID3synthetic audio fixture');await writeFile(path.join(f.data,'Audio','Music','track.mp3'),bytes);
+ await writeFile(path.join(f.data,'Audio','library.json'),JSON.stringify({version:1,tracks:[{id:'track',title:'Fixture jazz',pairId:'fixture-pair',mood:'Slow',file:'Music/track.mp3'}]}));
+ assert.equal((await f.request('/api/audio')).status,401);assert.equal((await f.request('/audio/track')).status,401);
+ const identity=await f.authenticate('/api/auth/register',{displayName:'Audio Test',username:'audio-tester',password:'test-password-only'});
+ const catalog=await (await f.request('/api/audio',{identity})).json();assert.equal(catalog.tracks.length,1);assert.equal(catalog.tracks[0].file,undefined);
+ const url=catalog.tracks[0].src;
+ const part=await f.request(url,{identity,headers:{Range:'bytes=3-8'}});assert.equal(part.status,206);assert.equal(part.headers.get('content-range'),`bytes 3-8/${bytes.length}`);assert.deepEqual(Buffer.from(await part.arrayBuffer()),bytes.subarray(3,9));
+ const head=await f.request(url,{identity,method:'HEAD'});assert.equal(head.status,200);assert.equal(Number(head.headers.get('content-length')),bytes.length);assert.equal((await head.arrayBuffer()).byteLength,0);
+ assert.equal((await f.request(url,{identity,headers:{Range:'bytes=999-'}})).status,416);
+ assert.equal((await f.request('/audio/track?account=other',{identity})).status,409);
+ assert.equal((await f.request('/Audio/library.json',{identity})).status,409);
+ await f.request('/api/auth/logout',{identity,method:'POST'});assert.equal((await f.request(url,{identity})).status,401);
 });

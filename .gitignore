@@ -34,3 +34,9 @@ stylebyfire.local.json.tmp
 !.env.example
 __pycache__/
 scripts/prepare_photos.py
+# Music belongs in the linked ancillary-media repository.
+Audio/
+*.mp3
+*.m4a
+*.wav
+*.ogg

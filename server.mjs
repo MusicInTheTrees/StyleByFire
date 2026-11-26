@@ -1,3 +1,4 @@
+import {audioCatalog,streamAudio} from './audio-library.mjs';
 import {createImageSync} from './image-sync.mjs';
 import http from 'node:http';
 import {imageLibrary} from './image-library.mjs';
@@ -17,6 +18,7 @@ const data=process.env.STYLEBYFIRE_DATA_DIR?path.resolve(process.env.STYLEBYFIRE
 let seed;try{seed=JSON.parse(await readFile(path.join(root,'seed.json'),'utf8'));}catch(error){if(error.code!=='ENOENT')throw error;seed={items:[],media:{},reference:null};}
 const library=await imageLibrary({root,data});await library.initialize();
 const accounts=new LocalAccounts({data,root,seed,library});await accounts.initialize();
+const audioDirectory=path.join(library.directory||data,'Audio');
 const imageSync=createImageSync({directory:library.directory,data,root});
 const port=Number(process.env.PORT||4173);
 const mime={'.html':'text/html; charset=utf-8','.js':'text/javascript; charset=utf-8','.css':'text/css; charset=utf-8','.svg':'image/svg+xml','.jpg':'image/jpeg','.png':'image/png','.webp':'image/webp','.json':'application/json','.ico':'image/x-icon'};
@@ -52,6 +54,7 @@ const server=http.createServer(async(req,res)=>{
   const decoded=decodeURIComponent(new URL(req.url,'http://'+host).pathname);
   if(/[\\\x00-\x1f:]/.test(decoded))return send(res,403,{error:'Invalid path.'});
   const pathname=path.posix.normalize(decoded),route=pathname.toLowerCase();
+  const privateAudio=route.startsWith('/audio/');
   const privateMedia=route.startsWith('/media/'),privateThumb=route.startsWith('/thumbs/');
   const mannequinAsset=/^\/api\/mannequin\/[a-f0-9-]+\/(?:image|references\/\d+)$/.test(pathname)&&['GET','HEAD'].includes(req.method);
   res.setHeader('Content-Security-Policy',"default-src 'self'; img-src 'self' data: blob:; style-src 'self' 'unsafe-inline'; script-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'self'");
@@ -63,9 +66,19 @@ const server=http.createServer(async(req,res)=>{
   if(pathname==='/api/auth/demo'&&req.method==='POST')return send(res,200,await queued(()=>accounts.demo(res)));
   if(pathname==='/api/auth/logout'&&req.method==='POST')return send(res,200,await queued(()=>accounts.logout(req,res)));
   const user=accounts.current(req);
-  if(route.startsWith('/api/')||privateMedia||privateThumb){
+  if(route.startsWith('/api/')||privateMedia||privateThumb||privateAudio){
    if(!user)return send(res,401,{error:'Sign in to open your wardrobe.'});
    if(pathname.startsWith('/api/')&&!mannequinAsset&&req.headers['x-stylebyfire-account']!==user.id)return send(res,409,{error:'The active account changed in another tab. Reload this page before continuing.'});
+  }
+  if(pathname==='/api/audio'&&req.method==='GET'){
+   const catalog=await audioCatalog(audioDirectory);
+   return send(res,200,{tracks:catalog.tracks.map(({file,...track})=>({...track,src:'/audio/'+track.id+'?account='+encodeURIComponent(user.id)}))});
+  }
+  if(privateAudio){
+   if(!['GET','HEAD'].includes(req.method))return send(res,405,{error:'Method not allowed.'});
+   if(new URL(req.url,'http://'+host).searchParams.get('account')!==user.id)return send(res,409,{error:'Audio account changed. Reopen the player.'});
+   const match=/^\/audio\/([-a-z0-9]{1,100})$/.exec(pathname);if(!match)return send(res,404,{error:'Track not found.'});
+   return await streamAudio(req,res,audioDirectory,match[1]);
   }
   if(pathname==='/api/image-sync'&&req.method==='GET')return send(res,200,await imageSync.status(user));
   if(pathname==='/api/image-sync'&&req.method==='POST')return send(res,200,await queued(()=>imageSync.sync(user)));

@@ -1,12 +1,14 @@
+import {validateAudioCatalog} from './audio-library.mjs';
 import {execFile} from 'node:child_process';
 import {promisify} from 'node:util';
-import {realpath,lstat,mkdir} from 'node:fs/promises';
+import {realpath,lstat,mkdir,readFile} from 'node:fs/promises';
 import path from 'node:path';
 const exec=promisify(execFile);
 const fail=message=>Object.assign(Error(message),{status:422});
 const images=/\.(png|jpe?g|webp|heic|heif|avif|gif|bmp|tiff?)$/i;
 export function imageSyncPath(file,userId){
  if(typeof file!=='string'||/[\\\x00-\x1f]/.test(file)||file.split('/').some(p=>!p||p==='.'||p==='..'||p.startsWith('.')&&p!=='.gitkeep'))return false;
+ if(file==='Audio/library.json'||file.startsWith('Audio/')&&/\.(mp3|m4a|ogg|wav)$/i.test(file))return true;
  return (file.startsWith('ClothingImages/')||file.startsWith('thumbs/')||file.startsWith('legacy/images/')||file.startsWith(`accounts/${userId}/images/`)||file.startsWith(`accounts/${userId}/mannequin/`))&&(images.test(file)||path.posix.basename(file)==='.gitkeep');
 }
 export function githubRepository(remote){
@@ -50,7 +52,8 @@ export function createImageSync({directory,data,root,run=exec}){
   const email=`${account.id}+${account.login}@users.noreply.github.com`;
   for(const kind of ['GIT_AUTHOR_IDENT','GIT_COMMITTER_IDENT'])if(!(await git(['var',kind])).includes(`<${email}>`))throw fail(`Set the image repository’s local Git email to ${email} before syncing. The app never changes your global Git identity.`);
   const status=await git(['status','--porcelain=v1','-z','--untracked-files=all']),files=changedImagePaths(status,user.id);
-  for(const file of files){const full=path.join(actual,file),info=await lstat(full),resolved=await realpath(full);if(!info.isFile()||info.isSymbolicLink()||!resolved.startsWith(actual+path.sep))throw fail('Sync does not follow image links outside the library.');if(info.size>95*1024*1024)throw fail('An image is too large for GitHub. Keep each file below 95 MB.');}
+  for(const file of files){const full=path.join(actual,file),info=await lstat(full),resolved=await realpath(full);if(!info.isFile()||info.isSymbolicLink()||!resolved.startsWith(actual+path.sep))throw fail('Sync does not follow image links outside the library.');if(info.size>95*1024*1024)throw fail('A media file is too large for GitHub. Keep each file below 95 MB.');}
+  if(files.includes('Audio/library.json'))validateAudioCatalog(JSON.parse(await readFile(path.join(directory,'Audio','library.json'),'utf8')));
   return {repository,visibility:'private',branch,account:account.login,changed:files.length,files};
  }
  async function sync(user){
@@ -77,12 +80,12 @@ export function createImageSync({directory,data,root,run=exec}){
    await inspect(user); // Recheck authentication and effective identity immediately before commit.
    const staged=(await git(['diff','--cached','--name-only','-z'])).split('\0').filter(Boolean);
    if(staged.some(file=>!imageSyncPath(file,user.id)))throw fail('The staged files changed during sync. Review them in Git before retrying.');
-   if(staged.length)await git(['commit','-m','Back up StyleByFire clothing and mannequin images'],'Could not commit the image backup. Review the repository and retry.');
+   if(staged.length)await git(['commit','-m','Back up StyleByFire photos, mannequin images, and music'],'Could not commit the image backup. Review the repository and retry.');
   }
   await inspect(user); // Identity is verified before every push, including retries.
   const head=(await git(['rev-parse','HEAD'])).trim();
   if(head!==remoteHead)await git(['push','origin',`HEAD:refs/heads/${info.branch}`],'The image backup could not be pushed. Its local commit is saved. Check the connection or remote changes and retry.');
-  return {ok:true,repository:info.repository,commit:head,message:head===remoteHead?'Your images are already backed up to GitHub.':'Your image backup is saved on GitHub.'};
+  return {ok:true,repository:info.repository,commit:head,message:head===remoteHead?'Your media is already backed up to GitHub.':'Your media backup is saved on GitHub.'};
  }
  return {async status(user){const {files,...info}=await inspect(user);return info;},sync(user){if(pending)throw fail('An image sync is already running. Please wait.');pending=sync(user).finally(()=>{pending=null;});return pending;}};
 }
