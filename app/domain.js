@@ -92,7 +92,7 @@ export function assessOutfit(items, mode, rules, profile) {
     warnings.push('Check your course dress code, including shirt tucking, hem length and permitted spikes. Confirm stretch, breathability and walking comfort against the garments.');
     for(const item of items)for(const issue of golfConflicts(item,rules))warnings.push(`${item.name} ${issue}.`);
     if(missing.includes('Shoes'))warnings.push(rules.golfAllowTrainers?'Add golf shoes or trainers approved by your course; dress shoes do not fill this gap.':'Add golf shoes, or allow course-approved trainers in the Golf playbook; dress shoes do not fill this gap.');
-    else if(items.some(i=>i.category==='Shoes'&&!/\bgolf\b/i.test([i.name,i.subcategory,...i.tags].join(' '))))warnings.push('Confirm that your course accepts these trainers and that their soles provide suitable grip.');
+    else if(items.some(i=>i.category==='Shoes'&&golfConflicts(i,rules).length===0&&!/\bgolf\b/i.test([i.name,i.subcategory,...i.tags].join(' '))))warnings.push('Confirm that your course accepts these trainers and that their soles provide suitable grip.');
   }
   for(const type of ['tie','belt','glasses','watch']) {
     if(items.filter(i=>accessoryType(i)===type).length>1)warnings.push(`Multiple ${ACCESSORY_LABELS[type].toLowerCase()} pieces are pinned. Check that you intend to wear them together.`);
@@ -110,9 +110,17 @@ export function assessOutfit(items, mode, rules, profile) {
   if(accessories.length>1)reasons.push(`Combines ${accessories.length} accessories: ${[...new Set(accessories.map(i=>ACCESSORY_LABELS[accessoryType(i)].toLowerCase()))].join(', ')}.`);
   return {missing,warnings,reasons,complete:missing.length===0};
 }
+export function outfitCandidateIssues(item,mode,rules,profile){
+ const issues=[],excluded=profile.avoidTags.map(s=>s.toLowerCase());
+ if(item.availability&&item.availability!=='ready')issues.push(AVAILABILITY[item.availability]||'Not ready to wear');
+ if(!item.modes.includes(mode))issues.push(`Not marked for ${mode}`);
+ if(item.formality<rules.minFormality||item.formality>rules.maxFormality)issues.push(`Formality ${item.formality} is outside your ${rules.minFormality}–${rules.maxFormality} range`);
+ if(item.tags.some(t=>excluded.includes(t.toLowerCase())))issues.push('Matches a tag you avoid');
+ if(mode==='Golf')issues.push(...golfConflicts(item,rules));
+ return issues;
+}
 export function outfitCandidates(allItems,mode,rules,profile){
-  const excluded=profile.avoidTags.map(s=>s.toLowerCase());
-  return allItems.filter(i=>(!i.availability||i.availability==='ready')&&i.modes.includes(mode)&&i.formality>=rules.minFormality&&i.formality<=rules.maxFormality&&!i.tags.some(t=>excluded.includes(t.toLowerCase()))&&(mode!=='Golf'||golfConflicts(i,rules).length===0));
+ return allItems.filter(item=>outfitCandidateIssues(item,mode,rules,profile).length===0);
 }
 export function generateOutfit(allItems, mode, rules, profile, lockedIds=[], seed=1, options={}) {
   let n=seed>>>0; const random=()=>{n=(n*1664525+1013904223)>>>0;return n/4294967296;};

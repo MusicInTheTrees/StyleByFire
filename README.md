@@ -267,7 +267,7 @@ The blue-and-silver **tailored flame** is the primary app icon, used in the brow
 
 ## Studio music
 
-A compact player above Settings lets you listen while moving between the wardrobe, designer, and weekly planner. It uses themed Play/Pause, Next, Volume, and three-dot Audio settings buttons, with no song-progress bar. On smaller screens it sits above Settings in the top bar. Autoplay is on by default on sign-in and reload; if the browser blocks it, press **Play**. Disable **Autoplay on sign-in** in Audio settings to start paused. The first-use volume is **15%**. Use the player to pause, skip, adjust volume, or mute, and open **Settings → Audio** for volume, All/Slow/Upbeat playlists, the track list, and **Refresh music library**. Volume, mute, autoplay, playlist, and the last two played tracks are remembered for each account in this browser. Signing out stops playback.
+A compact player above Settings lets you listen while moving between the wardrobe, designer, and weekly planner. It uses themed Play/Pause, Next, Volume, and three-dot Audio settings buttons, with no song-progress bar. On smaller screens it sits above Settings in the top bar. Autoplay is on by default on sign-in, reload, and when returning to the tab or window. If the browser blocks it, the next click or ordinary keypress in the app retries playback; Play also works. A paused track resumes from its current position when you return. Pause holds during the current visit; disable **Autoplay when opening or returning to the app** in Audio settings to keep it paused across visits. Browser autoplay permissions still apply, so a foreground change alone cannot guarantee audible playback before the browser allows it. The first-use volume is **15%**. Use the player to pause, skip, adjust volume, or mute, and open **Settings → Audio** for volume, All/Slow/Upbeat playlists, the track list, and **Refresh music library**. Volume, mute, autoplay, playlist, and the last two played tracks are remembered for each account in this browser. Signing out stops playback.
 
 Shuffle plays every track once per round when the selected library allows it. Paired versions have at least **two other tracks between them**, even across rounds, playlist changes, and browser restarts. If a small selection cannot satisfy this spacing, playback stops with an explanation instead of breaking the rule. Changing the playlist affects the next track; it does not interrupt the current song.
 
@@ -371,3 +371,9 @@ The automated tests cover outfit rules and accessory combinations, weekly schedu
 - `STYLEBYFIRE_DATA_DIR` selects a separate data directory for isolated QA.
 
 Source is plain JavaScript, CSS, and HTML served by a small Node server. `app/domain.js` owns outfit rules and validation; `app/photos.js` owns non-destructive image rendering; `app/app.js` owns the interface. The Windows launchers and `scripts/launch.mjs` handle local startup and shutdown.
+
+### Outfit selection feedback
+
+Category and occasion filters use filled, bordered buttons with clear selected states throughout the app. Search fields span the available action area, including the weekly outfit editor. Pinned pieces appear in a photo tray above the outfit builder with names, individual Unpin controls, and Clear pins; matching picker cards have a prominent outline and Pinned badge.
+
+An outfit missing shoes now explains whether the wardrobe has no shoes or whether existing shoes are excluded by occasion suitability, formality, availability, avoided tags, or Golf rules. Review shoe details to correct labels, or use Choose shoes manually to keep the existing outfit and select footwear with any style warnings visible. The generator continues to respect suitability settings.
